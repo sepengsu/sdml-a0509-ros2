@@ -1,0 +1,5 @@
+# Ignore everything by default
+*
+
+# Only include what Docker build actually needs
+!docker/

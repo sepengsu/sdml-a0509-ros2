@@ -1,0 +1,10 @@
+{
+  "start_pose": {
+    "position": { "x": 400, "y": 150, "z": 280 },
+    "orientation": { "x": 0.0, "y": 180.0, "z": 45.0 }
+  },
+  "target_pose": {
+    "position": { "x": 400, "y": -150, "z": 280 },
+    "orientation": { "x": 0.0, "y": 180.0, "z": 45.0 }
+  }
+}

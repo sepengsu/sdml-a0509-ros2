@@ -1,0 +1,11 @@
+{
+  "default_time": 2.0,
+  "pick_approach_time": 5.0,
+  "pick_position_time": 2.0,
+  "pick_depart_time": 2.0,
+  "place_approach_time": 7.0,
+  "place_position_time": 2.0,
+  "place_depart_time": 2.0,
+  "gripper_close_time": 1.0,
+  "gripper_open_time": 1.0
+}

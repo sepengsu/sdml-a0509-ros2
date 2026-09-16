@@ -1,0 +1,3 @@
+*.sh text eol=lf
+src/sdml_a0509/sdml_a0509_control/scripts/* text eol=lf
+src/a0509_mujoco_sim/scripts/*.py text eol=lf

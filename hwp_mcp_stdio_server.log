@@ -1,0 +1,32 @@
+2026-06-02 13:09:39,001 - hwp-mcp-stdio-server - INFO - FastMCP successfully imported
+2026-06-02 13:09:39,017 - hwp-mcp-stdio-server - INFO - HwpController imported successfully
+2026-06-02 13:09:39,018 - hwp-mcp-stdio-server - INFO - HwpTableTools imported successfully
+2026-06-02 13:09:39,041 - hwp-mcp-stdio-server - INFO - Starting HWP MCP stdio server
+2026-06-02 13:09:39,048 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-06-02 15:13:54,341 - hwp-mcp-stdio-server - INFO - FastMCP successfully imported
+2026-06-02 15:13:54,354 - hwp-mcp-stdio-server - INFO - HwpController imported successfully
+2026-06-02 15:13:54,354 - hwp-mcp-stdio-server - INFO - HwpTableTools imported successfully
+2026-06-02 15:13:54,373 - hwp-mcp-stdio-server - INFO - Starting HWP MCP stdio server
+2026-06-02 15:13:54,378 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-06-02 15:14:12,260 - hwp-mcp-stdio-server - INFO - FastMCP successfully imported
+2026-06-02 15:14:12,274 - hwp-mcp-stdio-server - INFO - HwpController imported successfully
+2026-06-02 15:14:12,274 - hwp-mcp-stdio-server - INFO - HwpTableTools imported successfully
+2026-06-02 15:14:12,297 - hwp-mcp-stdio-server - INFO - Starting HWP MCP stdio server
+2026-06-02 15:14:12,303 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-06-02 15:14:13,451 - hwp-mcp-stdio-server - INFO - FastMCP successfully imported
+2026-06-02 15:14:13,464 - hwp-mcp-stdio-server - INFO - HwpController imported successfully
+2026-06-02 15:14:13,466 - hwp-mcp-stdio-server - INFO - HwpTableTools imported successfully
+2026-06-02 15:14:13,487 - hwp-mcp-stdio-server - INFO - Starting HWP MCP stdio server
+2026-06-02 15:14:13,491 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-06-02 15:14:20,123 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2026-06-02 15:14:51,058 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2026-06-02 16:38:54,706 - hwp-mcp-stdio-server - INFO - FastMCP successfully imported
+2026-06-02 16:38:54,722 - hwp-mcp-stdio-server - INFO - HwpController imported successfully
+2026-06-02 16:38:54,722 - hwp-mcp-stdio-server - INFO - HwpTableTools imported successfully
+2026-06-02 16:38:54,744 - hwp-mcp-stdio-server - INFO - Starting HWP MCP stdio server
+2026-06-02 16:38:54,751 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-06-02 16:39:08,148 - hwp-mcp-stdio-server - INFO - FastMCP successfully imported
+2026-06-02 16:39:08,163 - hwp-mcp-stdio-server - INFO - HwpController imported successfully
+2026-06-02 16:39:08,164 - hwp-mcp-stdio-server - INFO - HwpTableTools imported successfully
+2026-06-02 16:39:08,186 - hwp-mcp-stdio-server - INFO - Starting HWP MCP stdio server
+2026-06-02 16:39:08,193 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest

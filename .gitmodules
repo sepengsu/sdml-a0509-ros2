@@ -1,0 +1,10 @@
+[submodule "src/doosan-robot2"]
+	path = src/doosan-robot2
+	url = https://github.com/DoosanRobotics/doosan-robot2
+# [submodule "src/realsense/realsense-ros"]
+# 	path = src/realsense/realsense-ros
+# 	url = https://github.com/IntelRealSense/realsense-ros.git
+# [submodule "src/mujoco_ros2_control"]
+# 	path = src/mujoco_ros2_control
+# 	url = https://github.com/moveit/mujoco_ros2_control
+	

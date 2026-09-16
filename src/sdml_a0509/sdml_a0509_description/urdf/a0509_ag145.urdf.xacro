@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot name="sdml_a0509_ag145" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- A0509 arm (macro only) + box_ag145 (gripper+box+cam). dsr a0509.urdf.xacro 전체 include 금지(중첩 robot/기본 그리퍼). -->
+  <xacro:arg name="prefix" default=""/>
+  <xacro:arg name="color" default="blue"/>
+  <xacro:arg name="gripper_prefix" default="ag145_"/>
+  <xacro:arg name="parent_link" default="link_6"/>
+  <xacro:arg name="gripper_xyz" default="0 0 0"/>
+  <xacro:arg name="gripper_rpy" default="0 0 0.7853981634"/>
+
+  <xacro:property name="cr" value="$(arg color)"/>
+  <xacro:if value="${cr == 'white'}">
+    <xacro:include filename="$(find dsr_description2)/xacro/macro.a0509.white.xacro"/>
+  </xacro:if>
+  <xacro:unless value="${cr == 'white'}">
+    <xacro:include filename="$(find dsr_description2)/xacro/macro.a0509.blue.xacro"/>
+  </xacro:unless>
+
+  <xacro:a0509 namespace="$(arg prefix)"/>
+
+  <link name="world"/>
+  <joint name="world_fixed" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="world"/>
+    <child link="base_link"/>
+  </joint>
+
+  <xacro:include filename="$(find dh_ag145_description)/urdf/box_ag145_macro.xacro"/>
+  <xacro:box_ag145_assembly
+    parent="$(arg parent_link)"
+    prefix="$(arg gripper_prefix)"
+    gripper_xyz="$(arg gripper_xyz)"
+    gripper_rpy="$(arg gripper_rpy)"
+    />
+</robot>

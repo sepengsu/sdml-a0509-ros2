@@ -1,0 +1,23 @@
+/log
+/build
+/install
+
+__pycache__
+#
+# 가상환경 관련 
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyzw
+*.pyzwz
+*.pyzwzw
+*.pyzwzwz
+.venv/
+.uv-cache/
+.uv-python/
+
+
+python/

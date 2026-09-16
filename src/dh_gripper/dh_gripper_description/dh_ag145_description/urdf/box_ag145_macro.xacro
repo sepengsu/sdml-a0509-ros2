@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find dh_ag145_description)/urdf/dh_ag145_macro.xacro"/>
+  <xacro:include filename="$(find sdml_a0509_camera)/urdf/_d435i.urdf.xacro"/>
+
+  <xacro:property name="mesh_dir" value="package://dh_ag145_description/meshes"/>
+  <xacro:property name="mesh_scale" value="0.001 0.001 0.001"/>
+
+  <material name="gripper_box_black">
+    <color rgba="0 0 0 1"/>
+  </material>
+
+  <!--
+    AG145 + Gripperbox1 + D435i 조립체. parent 링크에 그리퍼 베이스를 고정한다.
+    - prefix="" 이면 camera_mount 링크명은 "camera_mount"
+    - prefix="ag145_" 이면 "ag145_camera_mount"
+  -->
+  <xacro:macro name="box_ag145_assembly" params="
+      parent
+      prefix
+      gripper_xyz:='0 0 0.1'
+      gripper_rpy:='0 0 0'
+      box1_xyz:='0.046207 0.0143 0.014717'
+      box1_rpy:='0 0 1.5708'
+      cam_xyz:='0.045 0.045 0.095025'
+      cam_rpy:='0 -1.5708 0'
+      camera_name:=camera
+      ">
+    <xacro:dh_ag145_gripper prefix="${prefix}" parent="${parent}">
+      <origin xyz="${gripper_xyz}" rpy="${gripper_rpy}"/>
+    </xacro:dh_ag145_gripper>
+
+    <link name="${prefix}box1_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${mesh_dir}/Gripperbox1.stl" scale="${mesh_scale}"/>
+        </geometry>
+        <material name="gripper_box_black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${mesh_dir}/Gripperbox1.stl" scale="${mesh_scale}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${prefix}base_to_box1" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}box1_link"/>
+      <origin xyz="${box1_xyz}" rpy="${box1_rpy}"/>
+    </joint>
+
+    <link name="${prefix}camera_mount"/>
+    <joint name="${prefix}gripper_camera_mount_joint" type="fixed">
+      <parent link="${prefix}box1_link"/>
+      <child link="${prefix}camera_mount"/>
+      <origin xyz="${cam_xyz}" rpy="${cam_rpy}"/>
+    </joint>
+
+    <xacro:sensor_d435i parent="${prefix}camera_mount" name="${camera_name}" use_nominal_extrinsics="true">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:sensor_d435i>
+  </xacro:macro>
+</robot>

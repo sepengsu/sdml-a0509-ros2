@@ -1,0 +1,133 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Docker: Build",
+      "type": "shell",
+      "command": "docker compose --profile virtual build",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Docker: Up (Virtual - Emulator)",
+      "type": "shell",
+      "command": "docker compose --profile virtual up --build",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Up (Virtual - Detached)",
+      "type": "shell",
+      "command": "docker compose --profile virtual up --build -d",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Up (Real Hardware)",
+      "type": "shell",
+      "command": "docker compose --profile real up --build",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Up (Real + External Gripper)",
+      "type": "shell",
+      "command": "docker compose --profile real-external up --build",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Down",
+      "type": "shell",
+      "command": "docker compose --profile virtual --profile real --profile real-external down",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Shell (ros-control)",
+      "type": "shell",
+      "command": "docker compose --profile virtual run --rm ros-control bash",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Shell (ros-control, virtual run --rm)",
+      "type": "shell",
+      "command": "docker compose --profile virtual run --rm ros-control bash",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Shell (ros-control-real)",
+      "type": "shell",
+      "command": "docker compose --profile real run --rm ros-control-real bash",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ROS2: Launch MoveIt (virtual, robot-emulator)",
+      "type": "shell",
+      "command": "docker exec -it ros-control bash -lc \"ros2 launch dsr_bringup2 dsr_bringup2_moveit.launch.py model:=a0509 mode:=virtual host:=robot-emulator rt_host:=robot-emulator port:=12345\"",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ROS2: Launch SDML Bringup (virtual, run --rm)",
+      "type": "shell",
+      "command": "docker compose --profile virtual run --rm ros-control bash -lc \"cd /ros2_ws && source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch sdml_a0509_bringup a0509_virtual.launch.py host:=robot-emulator rt_host:=robot-emulator\"",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

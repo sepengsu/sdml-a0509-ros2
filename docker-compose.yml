@@ -1,0 +1,222 @@
+services:
+  # ======================
+  # Doosan Emulator (virtual only)
+  # ======================
+  emulator:
+    image: doosanrobot/dsr_emulator:3.0.1
+    container_name: dsr01_emulator
+    profiles: ["virtual"]
+    environment:
+      - ROBOT_MODEL=${ROBOT_MODEL:-A0509}
+    privileged: true
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5" # Limit to 1.5 CPU cores to avoid overconsumption
+          memory: 2G # Limit to 2GB RAM
+    networks:
+      ros_net:
+        aliases:
+          - robot-emulator
+
+  # ======================
+  # Main ROS 2 Control Stack
+  # ======================
+  ros-control:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ros
+    container_name: ros-control
+    profiles: ["virtual"]
+    environment:
+      - DISPLAY=:99
+      - VNC_RESOLUTION=1920x1080
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-29}
+      - ROBOT_MODE=${ROBOT_MODE:-virtual}
+      - ROBOT_MODEL=${ROBOT_MODEL:-a0509}
+      - GRIPPER_MOCK=${GRIPPER_MOCK:-true}
+      # Virtual mode - emulator is accessed via localhost (port mapping)
+      - ROBOT_HOST=robot-emulator
+      # Real mode (override via .env)
+      - ROBOT_IP=${ROBOT_IP:-192.168.137.100}
+      - ROBOT_PORT=${ROBOT_PORT:-12345}
+      # Auto-launch ROS2 on container start
+      - AUTO_LAUNCH=${AUTO_LAUNCH:-false}
+      - LAUNCH_PKG=${LAUNCH_PKG:-dsr_bringup2}
+      - LAUNCH_FILE=${LAUNCH_FILE:-dsr_bringup2_rviz.launch.py}
+    ports:
+      - "6080:6080" # noVNC web interface
+    volumes:
+      # Workspace source mount
+      - ./src:/ros2_ws/src:rw
+      - ./scripts:/scripts:rw
+      - ./json:/ros2_ws/json:rw
+      # Build artifacts (named volumes: 소스와 분리되어 캐시가 남습니다.
+      # 변경이 안 보이면: 컨테이너 안에서 `source /ros2_ws/install/setup.bash` 재실행,
+      # 또는 `/scripts/ros2_colcon_docker.sh --clean-pkgs <패키지>` 후 재빌드.)
+      - ros2_build:/ros2_ws/build
+      - ros2_install:/ros2_ws/install
+      - ros2_log:/ros2_ws/log
+    networks:
+      - ros_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+      memlock:
+        soft: -1
+        hard: -1
+    # GPU support (optional, uncomment if using NVIDIA)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    depends_on:
+      emulator:
+        condition: service_started
+        required: false
+
+  # ======================
+  # ROS Control with Real Hardware (Linux - Direct Modbus)
+  # ======================
+  ros-control-real:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ros
+    container_name: ros-control-real
+    profiles: ["real"]
+    environment:
+      - DISPLAY=:99
+      - VNC_RESOLUTION=1920x1080
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-29}
+      - ROBOT_MODE=real
+      - ROBOT_MODEL=${ROBOT_MODEL:-a0509}
+      - GRIPPER_MOCK=false
+      - GRIPPER_EXTERNAL=false
+      - ROBOT_HOST=${ROBOT_IP:-192.168.137.100}
+      - ROBOT_IP=${ROBOT_IP:-192.168.137.100}
+      - ROBOT_PORT=${ROBOT_PORT:-12345}
+      # Auto-launch ROS2 on container start
+      - AUTO_LAUNCH=${AUTO_LAUNCH:-false}
+      - LAUNCH_PKG=${LAUNCH_PKG:-dsr_bringup2}
+      - LAUNCH_FILE=${LAUNCH_FILE:-dsr_bringup2_rviz.launch.py}
+    ports:
+      - "6081:6080" # noVNC web interface
+    volumes:
+      - ./src:/ros2_ws/src:rw
+      - ./scripts:/scripts:rw
+      # Build artifacts (named volumes: 소스와 분리되어 캐시가 남습니다.
+      # 변경이 안 보이면: 컨테이너 안에서 `source /ros2_ws/install/setup.bash` 재실행,
+      # 또는 `/scripts/ros2_colcon_docker.sh --clean-pkgs <패키지>` 후 재빌드.)
+      - ros2_build:/ros2_ws/build
+      - ros2_install:/ros2_ws/install
+      - ros2_log:/ros2_ws/log
+      # Device access for gripper (more portable than devices:)
+      - /dev:/dev
+    networks:
+      - ros_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    privileged: true
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+      memlock:
+        soft: -1
+        hard: -1
+    stdin_open: true
+    tty: true
+
+  # ======================
+  # ROS Control with External Gripper (Windows/macOS)
+  # ======================
+  # Use this profile when running on Windows or macOS where USB passthrough
+  # is not available. Run the gripper server on the host first:
+  #   dsr2-gripper --port COM3    (Windows)
+  #   dsr2-gripper --port /dev/tty.usbmodem*  (macOS)
+  ros-control-real-external:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ros
+    container_name: ros-control-real-external
+    profiles: ["real-external"]
+    environment:
+      - DISPLAY=:99
+      - VNC_RESOLUTION=1920x1080
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-29}
+      - ROBOT_MODE=real
+      - ROBOT_MODEL=${ROBOT_MODEL:-a0509}
+      - GRIPPER_MOCK=false
+      - GRIPPER_EXTERNAL=true
+      - GRIPPER_HOST=${GRIPPER_HOST:-host.docker.internal}
+      - GRIPPER_PORT_TCP=${GRIPPER_PORT_TCP:-9999}
+      - ROBOT_HOST=${ROBOT_IP:-192.168.137.100}
+      - ROBOT_IP=${ROBOT_IP:-192.168.137.100}
+      - ROBOT_PORT=${ROBOT_PORT:-12345}
+      # Auto-launch ROS2 on container start
+      - AUTO_LAUNCH=${AUTO_LAUNCH:-false}
+      - LAUNCH_PKG=${LAUNCH_PKG:-dsr_bringup2}
+      - LAUNCH_FILE=${LAUNCH_FILE:-dsr_bringup2_rviz.launch.py}
+    ports:
+      - "6082:6080" # noVNC web interface
+    volumes:
+      - ./src:/ros2_ws/src:rw
+      - ./scripts:/scripts:rw
+      # Build artifacts (named volumes: 소스와 분리되어 캐시가 남습니다.
+      # 변경이 안 보이면: 컨테이너 안에서 `source /ros2_ws/install/setup.bash` 재실행,
+      # 또는 `/scripts/ros2_colcon_docker.sh --clean-pkgs <패키지>` 후 재빌드.)
+      - ros2_build:/ros2_ws/build
+      - ros2_install:/ros2_ws/install
+      - ros2_log:/ros2_ws/log
+    networks:
+      - ros_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+      memlock:
+        soft: -1
+        hard: -1
+    stdin_open: true
+    tty: true
+
+  # ======================
+  # ROSBridge WebSocket Server (Unity ↔ ROS 2)
+  # ======================
+  rosbridge:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ros
+    container_name: rosbridge
+    profiles: ["virtual", "real", "real-external"]
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-29}
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      source /opt/ros/humble/setup.bash &&
+      ros2 launch rosbridge_server rosbridge_websocket_launch.xml port:=9090
+    ports:
+      - "9090:9090"
+    networks:
+      - ros_net
+
+networks:
+  ros_net:
+    driver: bridge
+
+volumes:
+  ros2_build:
+  ros2_install:
+  ros2_log:

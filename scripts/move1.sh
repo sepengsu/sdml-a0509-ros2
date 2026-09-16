@@ -1,0 +1,1 @@
+ros2 service call /motion/move_line  dsr_msgs2/srv/MoveLine "{pos: [300, 100, 300, 0, 180,0], vel: [40.0,40.0], acc: [40.0,40.0]}"

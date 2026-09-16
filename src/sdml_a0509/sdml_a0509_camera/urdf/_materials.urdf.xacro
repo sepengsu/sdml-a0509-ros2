@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<robot name="camera_materials" xmlns:xacro="http://ros.org/wiki/xacro">
+  <material name="aluminum">
+    <color rgba="0.65 0.65 0.65 1.0"/>
+  </material>
+</robot>

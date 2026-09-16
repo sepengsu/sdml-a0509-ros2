@@ -1,0 +1,2 @@
+# ros2 service call /motion/move_line  dsr_msgs2/srv/MoveLine "{pos: [380.6048583984375, 24.713272094726562, 534.7537841796875, 124.88188934326172, -0.006696522701531649, -124.88506317138672], vel: [40.0,40.0], acc: [40.0,40.0], time: 2.0}"
+ros2 service call /motion/move_joint dsr_msgs2/srv/MoveJoint "{pos: [4.00, -32.01, 84.98, -3.99, 115.02, 45.00], time: 2.0}" 
