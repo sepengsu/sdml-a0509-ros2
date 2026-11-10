@@ -14,6 +14,9 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration("use_sim_time")
     start_rviz = LaunchConfiguration("start_rviz")
     rviz_config = LaunchConfiguration("rviz_config")
+    gripper_type = LaunchConfiguration("gripper_type")
+    mdpg_mount_xyz = LaunchConfiguration("mdpg_mount_xyz")
+    mdpg_mount_rpy = LaunchConfiguration("mdpg_mount_rpy")
 
     declare_model = DeclareLaunchArgument("model", default_value="a0509", description="ROBOT_MODEL")
     declare_color = DeclareLaunchArgument("color", default_value="white", description="ROBOT_COLOR")
@@ -26,7 +29,7 @@ def generate_launch_description():
     declare_rviz_config = DeclareLaunchArgument(
         "rviz_config",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("dsr_moveit_config_a0509"), "launch", "moveit.rviz"]
+            [FindPackageShare("sdml_a0509_description"), "rviz", "a0509_tool.rviz"]
         ),
         description="RViz config path.",
     )
@@ -40,6 +43,9 @@ def generate_launch_description():
             "color": color,
             "use_mujoco": "true",
             "use_sim_time": use_sim_time,
+            "gripper_type": gripper_type,
+            "mdpg_mount_xyz": mdpg_mount_xyz,
+            "mdpg_mount_rpy": mdpg_mount_rpy,
         }.items(),
     )
 
@@ -48,12 +54,14 @@ def generate_launch_description():
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
-            PathJoinSubstitution([FindPackageShare("dsr_description2"), "xacro", model]),
-            ".urdf.xacro",
+            PathJoinSubstitution([FindPackageShare("sdml_a0509_description"), "urdf", "a0509_with_gripper.urdf.xacro"]),
             " use_mujoco:=true",
             " color:=",
             color,
             " namespace:=",
+            " gripper_type:=", gripper_type,
+            " mdpg_mount_xyz:='", mdpg_mount_xyz, "'",
+            " mdpg_mount_rpy:='", mdpg_mount_rpy, "'",
         ]
     )
     robot_description = {"robot_description": robot_description_content}
@@ -78,6 +86,9 @@ def generate_launch_description():
     return LaunchDescription(
         [
             declare_model,
+            DeclareLaunchArgument("gripper_type", default_value="none", description="none | ag145 | mdpg_1s1"),
+            DeclareLaunchArgument("mdpg_mount_xyz", default_value="TODO_MEASURE"),
+            DeclareLaunchArgument("mdpg_mount_rpy", default_value="TODO_MEASURE"),
             declare_color,
             declare_use_sim_time,
             declare_start_rviz,

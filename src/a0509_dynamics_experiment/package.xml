@@ -15,8 +15,9 @@
   <exec_depend>visualization_msgs</exec_depend>
   <exec_depend>dsr_msgs2</exec_depend>
   <exec_depend>dh_ag145_description</exec_depend>
+  <exec_depend>mdpg_1s1_description</exec_depend>
+  <exec_depend>sdml_a0509_description</exec_depend>
   <exec_depend>a0509_mujoco_sim</exec_depend>
-  <exec_depend>sdml_a0509_bringup</exec_depend>
   <exec_depend>dsr_bringup2</exec_depend>
   <exec_depend>dsr_controller2</exec_depend>
   <exec_depend>controller_manager</exec_depend>

@@ -67,7 +67,7 @@ def validate_real_execution(config: TrajectoryConfig, latest: dict) -> list[str]
     return reasons
 
 
-def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass: float,
+def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass: float | None,
             duration_s: float, requested_motion: bool, connection_timeout_s: float = 10.0,
             reference_explicit: bool = False) -> tuple[Path, bool]:
     import rclpy
@@ -155,6 +155,8 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
         save_metadata(folder, plan, "real", trial_id, {
             "quality": recorder.quality(), "rosbag": str(bag_path),
             "gripper_type": gripper_type, "payload_mass_kg": payload_mass,
+            "tool_model_status": ("mDPG mass/inertia, mount, TCP and pneumatic IO are not independently validated"
+                                  if gripper_type == "mdpg_1s1" else None),
             "rt_source": "dsr_controller2 /rt_topic/<key> Float32MultiArray (10 ms configured, arrival-time joined)",
             "raw_rt_units": {"actual_joint_position": "deg", "actual_joint_velocity": "deg/s",
                              "actual_motor_torque": "Nm, motor-current/gear conversion",

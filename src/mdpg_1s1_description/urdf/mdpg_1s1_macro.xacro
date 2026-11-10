@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- STEP-derived fixed visual/collision model; dimensions in m. -->
+  <!-- Mounting origin is an APPROXIMATION from the CAD housing face; calibrate on real hardware. -->
+  <!-- Contact frame is NOMINAL at the lowest CAD surface (-0.090 m). -->
+  <xacro:macro name="mdpg_1s1_gripper" params="prefix parent *origin tcp_z:=-0.090">
+    <link name="${prefix}base_link">
+      <visual name="pump_cover_visual">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><mesh filename="package://mdpg_1s1_description/meshes/pump_cover.stl" scale="0.001 0.001 0.001"/></geometry>
+        <material name="mdpg_pump_cover"><color rgba="0.78 0.80 0.83 1"/></material>
+      </visual>
+      <visual name="led_indicator_visual">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><mesh filename="package://mdpg_1s1_description/meshes/led_indicator.stl" scale="0.001 0.001 0.001"/></geometry>
+        <material name="mdpg_led_indicator"><color rgba="1.0 0.65 0.06 1"/></material>
+      </visual>
+      <visual name="bottom_cover_visual">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><mesh filename="package://mdpg_1s1_description/meshes/bottom_cover.stl" scale="0.001 0.001 0.001"/></geometry>
+        <material name="mdpg_bottom_cover"><color rgba="0.32 0.34 0.37 1"/></material>
+      </visual>
+      <visual name="solid33_visual">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><mesh filename="package://mdpg_1s1_description/meshes/solid33.stl" scale="0.001 0.001 0.001"/></geometry>
+        <material name="mdpg_solid33"><color rgba="0.12 0.12 0.14 1"/></material>
+      </visual>
+      <visual name="air_pad_body_visual">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><mesh filename="package://mdpg_1s1_description/meshes/air_pad_body.stl" scale="0.001 0.001 0.001"/></geometry>
+        <material name="mdpg_air_pad_body"><color rgba="0.18 0.19 0.21 1"/></material>
+      </visual>
+      <visual name="air_pad_contact_visual">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><mesh filename="package://mdpg_1s1_description/meshes/air_pad_contact.stl" scale="0.001 0.001 0.001"/></geometry>
+        <material name="mdpg_air_pad_contact"><color rgba="0.10 0.27 0.45 1"/></material>
+      </visual>
+      <!-- Approximate collisions only; do not use these for quantitative contact studies. -->
+      <collision name="housing_collision">
+        <origin xyz="0 0 -0.0335" rpy="0 0 0"/>
+        <geometry><box size="0.065 0.077 0.067"/></geometry>
+      </collision>
+      <collision name="air_pad_collision">
+        <origin xyz="0 0 -0.0785" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.015" length="0.023"/></geometry>
+      </collision>
+      <!-- Deliberately no guessed <inertial>; supply measured/CAD-material mass, CoM, inertia before dynamics use. -->
+    </link>
+    <joint name="${prefix}mount_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${prefix}base_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+    <link name="${prefix}tcp"/>
+    <joint name="${prefix}tcp_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}tcp"/>
+      <origin xyz="0 0 ${tcp_z}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+</robot>

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="a0509">
+  <!-- The upstream A0509 xacro supplies the arm and ros2_control. Tool selection is local. -->
+  <xacro:arg name="gripper_type" default="none"/>
+  <!-- TODO: measure the mDPG mount transform from link_6. No numeric default is valid. -->
+  <xacro:arg name="mdpg_mount_xyz" default="TODO_MEASURE"/>
+  <xacro:arg name="mdpg_mount_rpy" default="TODO_MEASURE"/>
+  <xacro:include filename="$(find dsr_description2)/xacro/a0509.urdf.xacro"/>
+
+  <xacro:if value="${'$(arg gripper_type)' == 'ag145'}">
+    <xacro:include filename="$(find dh_ag145_description)/urdf/dh_ag145_macro.xacro"/>
+    <!-- Existing AG145 installation uses a 45 degree rotation about link_6 Z. -->
+    <xacro:dh_ag145_gripper prefix="ag145_" parent="link_6">
+      <origin xyz="0 0 0" rpy="0 0 0.7853981634"/>
+    </xacro:dh_ag145_gripper>
+  </xacro:if>
+  <xacro:if value="${'$(arg gripper_type)' == 'mdpg_1s1'}">
+    <xacro:include filename="$(find mdpg_1s1_description)/urdf/mdpg_1s1_macro.xacro"/>
+    <xacro:mdpg_1s1_gripper prefix="mdpg_" parent="link_6">
+      <origin xyz="$(arg mdpg_mount_xyz)" rpy="$(arg mdpg_mount_rpy)"/>
+    </xacro:mdpg_1s1_gripper>
+  </xacro:if>
+</robot>

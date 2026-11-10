@@ -34,7 +34,7 @@ def ordered(values: Sequence[float], names: Sequence[str]) -> tuple[float, ...]:
 
 class DynamicsRecorder:
     def __init__(self, mode: str, trajectory_id: str, trial_id: str, gripper_type: str,
-                 payload_mass: float, sample_hz: int = 100, max_age_s: float = 0.03):
+                 payload_mass: float | None, sample_hz: int = 100, max_age_s: float = 0.03):
         if mode not in ("simulation", "real"):
             raise ValueError("recorder mode must be simulation or real")
         self.mode = mode

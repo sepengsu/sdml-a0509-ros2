@@ -17,9 +17,12 @@
   <exec_depend>rviz2</exec_depend>
   <exec_depend>a0509_mujoco_sim</exec_depend>
   <exec_depend>dsr_description2</exec_depend>
+  <exec_depend>sdml_a0509_description</exec_depend>
+  <exec_depend>mdpg_1s1_description</exec_depend>
   <exec_depend>sdml_a0509_moveit_config</exec_depend>
   <exec_depend>dsr_moveit_config_a0509</exec_depend>
   <exec_depend>sdml_a0509_control</exec_depend>
+  <exec_depend>a0509_dynamics_experiment</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

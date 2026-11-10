@@ -1,16 +1,37 @@
-"""RViz-only visualization launch for A0509 + AG145."""
+"""RViz-only visualization launch for the selected A0509 end effector."""
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+import math
+
+
+def _validate_tool(context):
+    if LaunchConfiguration("robot_model").perform(context) != "a0509":
+        raise RuntimeError("rviz_only tool description supports only robot_model:=a0509")
+    selected = LaunchConfiguration("gripper_type").perform(context)
+    if selected not in ("none", "ag145", "mdpg_1s1"):
+        raise RuntimeError(f"Unsupported gripper_type: {selected}")
+    if selected == "mdpg_1s1":
+        for key in ("mdpg_mount_xyz", "mdpg_mount_rpy"):
+            try:
+                values = [float(part) for part in LaunchConfiguration(key).perform(context).split()]
+                if len(values) != 3 or not all(math.isfinite(part) for part in values):
+                    raise ValueError()
+            except ValueError as error:
+                raise RuntimeError(f"{key} is TODO; supply three measured values") from error
+    return []
 
 
 def generate_launch_description():
     robot_model = LaunchConfiguration("robot_model")
     rviz_config = LaunchConfiguration("rviz_config")
     use_gui = LaunchConfiguration("use_gui")
+    gripper_type = LaunchConfiguration("gripper_type")
+    mdpg_mount_xyz = LaunchConfiguration("mdpg_mount_xyz")
+    mdpg_mount_rpy = LaunchConfiguration("mdpg_mount_rpy")
 
     declare_robot_model = DeclareLaunchArgument(
         "robot_model",
@@ -20,7 +41,7 @@ def generate_launch_description():
     declare_rviz_config = DeclareLaunchArgument(
         "rviz_config",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("dsr_moveit_config_a0509"), "launch", "moveit.rviz"]
+            [FindPackageShare("sdml_a0509_description"), "rviz", "a0509_tool.rviz"]
         ),
         description="RViz config file path.",
     )
@@ -36,12 +57,14 @@ def generate_launch_description():
             " ",
             PathJoinSubstitution(
                 [
-                    FindPackageShare("dsr_moveit_config_a0509"),
-                    "config",
-                    robot_model,
+                    FindPackageShare("sdml_a0509_description"),
+                    "urdf",
+                    "a0509_with_gripper.urdf.xacro",
                 ]
             ),
-            ".urdf.xacro",
+            " gripper_type:=", gripper_type,
+            " mdpg_mount_xyz:='", mdpg_mount_xyz, "'",
+            " mdpg_mount_rpy:='", mdpg_mount_rpy, "'",
         ]
     )
     robot_description = {"robot_description": robot_description_content}
@@ -80,8 +103,12 @@ def generate_launch_description():
     return LaunchDescription(
         [
             declare_robot_model,
+            DeclareLaunchArgument("gripper_type", default_value="none", description="none | ag145 | mdpg_1s1"),
+            DeclareLaunchArgument("mdpg_mount_xyz", default_value="TODO_MEASURE", description="Measured link_6 mount xyz (m)"),
+            DeclareLaunchArgument("mdpg_mount_rpy", default_value="TODO_MEASURE", description="Measured link_6 mount rpy (rad)"),
             declare_rviz_config,
             declare_use_gui,
+            OpaqueFunction(function=_validate_tool),
             robot_state_publisher,
             joint_state_publisher_gui,
             joint_state_publisher,

@@ -1,0 +1,12 @@
+# Fill with actual gripper+adapter values, relative to mdpg_base_link.
+# DO NOT use missing/placeholder values to train dynamics or compare sim-to-real.
+mass_kg: null
+center_of_mass_m: null    # [x, y, z]
+inertia_tensor_kg_m2: null # [ixx, iyy, izz, ixy, ixz, iyz]
+mount_to_link_6_xyz_m: null
+mount_to_link_6_rpy_rad: null
+mount_verified: false
+pad_nominal_tcp_z_m: -0.09   # CAD-bounds estimate only
+tcp_calibrated: false
+pad_contact_dynamics: null
+pneumatic_io: null           # TODO: valve outputs, pressure/vacuum inputs and safe states

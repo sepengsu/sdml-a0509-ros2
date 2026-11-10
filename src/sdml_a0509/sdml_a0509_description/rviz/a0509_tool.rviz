@@ -1,0 +1,27 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Reference Frame: world
+    - Class: rviz_default_plugins/RobotModel
+      Enabled: true
+      Name: RobotModel
+      Description Topic:
+        Value: /robot_description
+      TF Prefix: ""
+  Global Options:
+    Fixed Frame: world
+  Name: root
+Views:
+  Current:
+    Class: rviz_default_plugins/Orbit
+    Distance: 1.4
+    Focal Point:
+      X: 0.3
+      Y: 0
+      Z: 0.45

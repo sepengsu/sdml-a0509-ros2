@@ -22,7 +22,7 @@ from .trajectory_visualizer import save_dynamics_plot, save_trajectory_plot
 
 
 class MujocoObserver:
-    def __init__(self, scene_path: str | Path | None = None):
+    def __init__(self, scene_path: str | Path | None = None, tcp_site: str = "ag145_tcp"):
         import mujoco
         import numpy as np
 
@@ -48,7 +48,7 @@ class MujocoObserver:
         self.body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "link_6")
         if self.body_id < 0:
             raise RuntimeError("MuJoCo model missing link_6")
-        self.tcp_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "ag145_tcp")
+        self.tcp_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, tcp_site)
         # Conservative research limits from a0509_mujoco_sim/config/joint_limits.yaml.
         self.limits = [(-3.14, 3.14), (-1.3, 1.3), (-2.0, 2.0),
                        (-3.14, 3.14), (-2.0, 2.0), (-3.14, 3.14)]
@@ -260,7 +260,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
     try:
         if not connect_existing:
             launch_args = ["ros2", "launch", "a0509_mujoco_sim", "mujoco_sim.launch.py",
-                           "use_sim_time:=true"]
+                           "use_sim_time:=true", f"gripper_type:={gripper_type}"]
             if scene_path is not None:
                 launch_args.append(f"mujoco_model_path:={scene_path}")
             launch = subprocess.Popen(launch_args, env=os.environ.copy())

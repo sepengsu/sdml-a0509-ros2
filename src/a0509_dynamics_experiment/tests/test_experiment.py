@@ -187,6 +187,29 @@ def test_ag145_preview_uses_tool_tcp_without_robot_connection(tmp_path):
     assert (folder / "trajectory_3d.png").stat().st_size > 1000
 
 
+def test_mdpg_preview_is_visual_only_and_requires_mount(tmp_path):
+    pytest.importorskip("mujoco")
+    pytest.importorskip("mdpg_1s1_description.model")
+    with pytest.raises(SystemExit) as missing:
+        main(["--preview", "--trajectory", "T1", "--gripper-type", "mdpg_1s1"])
+    assert missing.value.code == 2
+    with pytest.raises(SystemExit) as dynamics:
+        main(["--simulation", "--trajectory", "T1", "--gripper-type", "mdpg_1s1",
+              "--mdpg-mount-xyz", "0", "0", "0", "--mdpg-mount-rpy", "0", "0", "0"])
+    assert dynamics.value.code == 2
+    # Identity mount is an explicit display test fixture, not a physical mount claim.
+    assert main(["--preview", "--trajectory", "T1", "--gripper-type", "mdpg_1s1",
+                 "--mdpg-mount-xyz", "0", "0", "0", "--mdpg-mount-rpy", "0", "0", "0",
+                 "--results-dir", str(tmp_path), "--sample-hz", "10",
+                 "--segment-seconds", "0.2", "--pre-hold", "0", "--post-hold", "0"]) == 0
+    folder = tmp_path / "preview" / "T1" / "trial_001"
+    metadata = json.loads((folder / "metadata.json").read_text())
+    assert metadata["gripper_model"]["mass_kg"] is None
+    assert metadata["gripper_model"]["pneumatic_io"] is None
+    assert metadata["gripper_model"]["mount_verified"] is False
+    assert (folder / "mdpg_scene.xml").is_file()
+
+
 @pytest.mark.parametrize("trajectory_id", ["T1", "T2", "T3"])
 def test_full_cartesian_path_ik_on_pinned_mujoco_model(trajectory_id):
     pytest.importorskip("mujoco")

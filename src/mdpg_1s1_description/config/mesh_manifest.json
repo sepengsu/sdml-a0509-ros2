@@ -1,0 +1,187 @@
+{
+  "source_file": "mDPG_1S1 CS (1).stp",
+  "source_step_product": "DC_AirGripper2_rev04_고객용",
+  "model_id_from_filename": "mDPG_1S1",
+  "geometry_is_assembly": true,
+  "step_component_instances": 5,
+  "exported_closed_solids": 6,
+  "coordinate_conversion": {
+    "description": "X_urdf=X_step-8.23388684; Y_urdf=-Z_step; Z_urdf=Y_step-31.89203348, with mm -> m in URDF scale",
+    "estimated_mount_origin_step_mm": [
+      8.23388684283585,
+      31.8920334837369,
+      0
+    ],
+    "mount_verified": false,
+    "pad_direction": "-Z",
+    "nominal_tcp_z_m": -0.09,
+    "nominal_tcp_verified": false
+  },
+  "mass_kg": null,
+  "center_of_mass_m": null,
+  "inertia_kg_m2": null,
+  "notes": [
+    "Geometry only; no material density, sensor I/O, pneumatic parameters or verified physical mass/inertia present in STEP",
+    "Air pad provided as two solids; no articulated fingers or moving joints inferred",
+    "No end-effector suction/contact physics or IO controller implemented"
+  ],
+  "parts": [
+    {
+      "mesh": "pump_cover.stl",
+      "step_component": "Pump_Cover_rev05",
+      "volume_cm3": 75.8933,
+      "bbox_m": [
+        [
+          -0.0325,
+          -0.035,
+          -0.06
+        ],
+        [
+          0.0325,
+          0.035,
+          0.0
+        ]
+      ],
+      "triangles": 8088,
+      "closed_mesh": false,
+      "color_group": "silver",
+      "stl_unit": "millimeter",
+      "ros_urdf_mesh_scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    {
+      "mesh": "led_indicator.stl",
+      "step_component": "LED_indicator_peter",
+      "volume_cm3": 0.2932,
+      "bbox_m": [
+        [
+          0.009001,
+          -0.038,
+          -0.037499
+        ],
+        [
+          0.015999,
+          -0.0195,
+          -0.030501
+        ]
+      ],
+      "triangles": 969,
+      "closed_mesh": false,
+      "color_group": "orange",
+      "stl_unit": "millimeter",
+      "ros_urdf_mesh_scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    {
+      "mesh": "bottom_cover.stl",
+      "step_component": "Cover_Bottom_rev04",
+      "volume_cm3": 108.0101,
+      "bbox_m": [
+        [
+          -0.0325,
+          -0.035,
+          -0.067
+        ],
+        [
+          0.0325,
+          0.035,
+          -0.037
+        ]
+      ],
+      "triangles": 8143,
+      "closed_mesh": false,
+      "color_group": "gray",
+      "stl_unit": "millimeter",
+      "ros_urdf_mesh_scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    {
+      "mesh": "solid33.stl",
+      "step_component": "솔리드33",
+      "volume_cm3": 0.0755,
+      "bbox_m": [
+        [
+          -0.02745,
+          0.0347,
+          -0.055
+        ],
+        [
+          -0.00445,
+          0.0352,
+          -0.0465
+        ]
+      ],
+      "triangles": 2704,
+      "closed_mesh": true,
+      "color_group": "dark",
+      "stl_unit": "millimeter",
+      "ros_urdf_mesh_scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    {
+      "mesh": "air_pad_body.stl",
+      "step_component": "air_pad (solid 1)",
+      "volume_cm3": 3.6173,
+      "bbox_m": [
+        [
+          -0.011983,
+          -0.011983,
+          -0.084
+        ],
+        [
+          0.011983,
+          0.011983,
+          -0.067
+        ]
+      ],
+      "triangles": 632,
+      "closed_mesh": true,
+      "color_group": "dark",
+      "stl_unit": "millimeter",
+      "ros_urdf_mesh_scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    },
+    {
+      "mesh": "air_pad_contact.stl",
+      "step_component": "air_pad (solid 2)",
+      "volume_cm3": 1.4631,
+      "bbox_m": [
+        [
+          -0.014995,
+          -0.014995,
+          -0.09
+        ],
+        [
+          0.014995,
+          0.014995,
+          -0.084
+        ]
+      ],
+      "triangles": 516,
+      "closed_mesh": true,
+      "color_group": "blue",
+      "stl_unit": "millimeter",
+      "ros_urdf_mesh_scale": [
+        0.001,
+        0.001,
+        0.001
+      ]
+    }
+  ],
+  "step_unit_confirmed": "millimeter (SI_UNIT(.MILLI.,.METRE.) in STEP)"
+}

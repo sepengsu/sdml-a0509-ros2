@@ -14,6 +14,7 @@
   <exec_depend>rviz2</exec_depend>
   <exec_depend>dsr_description2</exec_depend>
   <exec_depend>dh_ag145_description</exec_depend>
+  <exec_depend>mdpg_1s1_description</exec_depend>
   <exec_depend>sdml_a0509_camera</exec_depend>
 
   <export>

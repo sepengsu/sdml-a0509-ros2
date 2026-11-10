@@ -75,3 +75,9 @@ ros2 control list_controllers
 
 - namespace를 사용하지 않으므로 모든 토픽/서비스는 루트에 있습니다.
 - 씬 및 로봇 MJCF는 `dsr_description2`의 `mujoco_models/a0509/`를 사용합니다.
+
+### Tool selection
+
+`gripper_type:=none|ag145|mdpg_1s1` selects both the active A0509 Xacro in `sdml_a0509_description` and the MuJoCo scene. AG145 uses the existing experiment scene builder. mDPG uses the ZIP-derived CAD meshes attached as a massless visual frame on `link_6`; it has no modeled suction, contact force, mass or inertia. This scene is suitable for visualization only, not gripper dynamics data or PKAN training.
+
+The mDPG mounting pose is unknown. Supply measured `mdpg_mount_xyz` (metres) and `mdpg_mount_rpy` (radians); leaving either as `TODO_MEASURE` causes launch to fail. `mdpg_tcp` is the uncalibrated CAD-bounds estimate. See `mdpg_1s1_description/config/dynamics_values_to_measure.yaml` for remaining physical and pneumatic IO TODOs.

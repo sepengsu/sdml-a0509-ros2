@@ -36,8 +36,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--duration", type=float, default=10.0, help="real read-only recording duration, seconds")
     parser.add_argument("--connection-timeout", type=float, default=10.0)
     parser.add_argument("--results-dir", default="results")
-    parser.add_argument("--gripper-type", default="none")
-    parser.add_argument("--payload-mass", type=float, default=0.0)
+    parser.add_argument("--gripper-type", choices=["none", "ag145", "mdpg_1s1"], default="none")
+    parser.add_argument("--mdpg-mount-xyz", type=float, nargs=3, metavar=("X", "Y", "Z"),
+                        help="measured link_6 to mDPG origin in metres")
+    parser.add_argument("--mdpg-mount-rpy", type=float, nargs=3, metavar=("R", "P", "Y"),
+                        help="measured link_6 to mDPG orientation in radians")
+    parser.add_argument("--payload-mass", type=float, default=None,
+                        help="measured payload mass in kg; mDPG remains unknown when omitted")
     parser.add_argument("--sim-domain-id", type=int, default=173)
     parser.add_argument("--connect-existing", action="store_true", help="connect to existing MuJoCo in the isolated domain")
     parser.add_argument("--record-video", action="store_true", help="save an MP4 of the MuJoCo display")
@@ -45,6 +50,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.gripper_type == "mdpg_1s1":
+        if args.mdpg_mount_xyz is None or args.mdpg_mount_rpy is None:
+            parser.error("mDPG mount is TODO; provide measured --mdpg-mount-xyz and --mdpg-mount-rpy")
+        if not all(math.isfinite(value) for value in (*args.mdpg_mount_xyz, *args.mdpg_mount_rpy)):
+            parser.error("mDPG mount values must be finite")
+        if args.simulation:
+            parser.error("mDPG MuJoCo is visual-only until mass/inertia are measured; trajectory dynamics recording is blocked")
+        if args.execute:
+            parser.error("mDPG real motion is blocked until mount, TCP and pneumatic IO are validated")
     if args.preview and args.execute:
         parser.error("--preview and --execute cannot be combined")
     if args.trajectory == "all" and not (args.preview or args.simulation):
@@ -53,7 +67,7 @@ def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None
         parser.error("--connect-existing requires --simulation")
     if args.record_video and not args.simulation:
         parser.error("--record-video requires --simulation")
-    if args.payload_mass < 0 or not math.isfinite(args.payload_mass):
+    if args.payload_mass is not None and (args.payload_mass < 0 or not math.isfinite(args.payload_mass)):
         parser.error("--payload-mass must be finite and nonnegative")
     if args.duration <= 0 or args.connection_timeout <= 0:
         parser.error("duration and connection timeout must be positive")
@@ -82,6 +96,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _validate(parser, args)
+    payload_mass = args.payload_mass if args.payload_mass is not None else (
+        None if args.gripper_type == "mdpg_1s1" else 0.0)
     if args.simulation and args.execute:
         print("--simulation takes priority; --execute has no real-robot effect.", file=sys.stderr)
     ids = ("T1", "T2", "T3", "T4") if args.trajectory == "all" else (args.trajectory,)
@@ -98,11 +114,17 @@ def main(argv: list[str] | None = None) -> int:
                     "movement_commands_sent": 0,
                     "gripper_type": args.gripper_type,
                 }
-                if args.gripper_type == "ag145":
-                    from .ag145_model import AG145_MASS_KG, AG145_TCP_OFFSET_MM, build_ag145_scene
+                if args.gripper_type in ("ag145", "mdpg_1s1"):
                     from .simulation_executor import MujocoObserver
-                    scene = build_ag145_scene(folder / "ag145_scene.xml")
-                    observer = MujocoObserver(scene)
+                    if args.gripper_type == "ag145":
+                        from .ag145_model import AG145_MASS_KG, AG145_TCP_OFFSET_MM, build_ag145_scene
+                        scene = build_ag145_scene(folder / "ag145_scene.xml")
+                        tcp_site = "ag145_tcp"
+                    else:
+                        from mdpg_1s1_description.model import build_mdpg_scene
+                        scene = build_mdpg_scene(folder / "mdpg_scene.xml", args.mdpg_mount_xyz, args.mdpg_mount_rpy)
+                        tcp_site = "mdpg_tcp"
+                    observer = MujocoObserver(scene, tcp_site=tcp_site)
                     reference_q = ((-0.5, -0.5, 1.6, 0.0, -0.6, 0.0)
                                    if trajectory_id != "T4" else config.joint_start_rad)
                     if trajectory_id != "T4" and args.reference_tcp_mm is None:
@@ -112,18 +134,24 @@ def main(argv: list[str] | None = None) -> int:
                     if trajectory_id == "T4":
                         plot_options["planned_xyz_mm"] = [observer.tcp_mm(point.q_rad)
                                                             for point in plan.points]
-                    preview_details.update({
-                        "preview_note": "AG145 TCP and A0509 links use the generated MuJoCo model; no ROS or robot connection.",
-                        "sim_model": "ag145_scene.xml",
-                        "gripper_model": {
+                    preview_details["sim_model"] = scene.name
+                    if args.gripper_type == "ag145":
+                        preview_details["gripper_model"] = {
                             "configuration": "fixed open pose", "mass_kg": AG145_MASS_KG,
                             "inertia": "uncalibrated box approximation",
                             "collision": "approximate bounding boxes",
-                            "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion",
-                            "tcp_site": "ag145_tcp", "tcp_offset_mm": list(AG145_TCP_OFFSET_MM),
+                            "tcp_site": tcp_site, "tcp_offset_mm": list(AG145_TCP_OFFSET_MM),
                             "tcp_calibrated": False,
-                        },
-                    })
+                        }
+                    else:
+                        preview_details["preview_note"] = "mDPG CAD geometry only; nominal TCP and supplied mount are uncalibrated; no ROS connection."
+                        preview_details["gripper_model"] = {
+                            "mass_kg": None, "inertia": None, "pneumatic_io": None,
+                            "collision": None, "tcp_site": tcp_site, "tcp_calibrated": False,
+                            "mount_xyz_m": list(args.mdpg_mount_xyz),
+                            "mount_rpy_rad": list(args.mdpg_mount_rpy),
+                            "mount_verified": False,
+                        }
                 else:
                     plan = generate(config)
                 save_trajectory(plan, folder)
@@ -131,13 +159,13 @@ def main(argv: list[str] | None = None) -> int:
                 save_metadata(folder, plan, "preview", trial_id, preview_details)
             elif args.simulation:
                 from .simulation_executor import execute
-                folder = execute(config, args.results_dir, args.gripper_type, args.payload_mass,
+                folder = execute(config, args.results_dir, args.gripper_type, payload_mass,
                                  args.sim_domain_id, args.connect_existing, args.connection_timeout,
                                  reference_explicit=args.reference_tcp_mm is not None,
                                  record_video=args.record_video)
             else:
                 from .real_executor import execute
-                folder, blocked = execute(config, args.results_dir, args.gripper_type, args.payload_mass,
+                folder, blocked = execute(config, args.results_dir, args.gripper_type, payload_mass,
                                           args.duration, args.execute, args.connection_timeout,
                                           reference_explicit=args.reference_tcp_mm is not None)
                 if blocked:

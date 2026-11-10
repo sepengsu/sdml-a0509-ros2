@@ -73,6 +73,21 @@ AG145 Preview는 MuJoCo Python 패키지가 설치된 환경에서 로컬 모델
 
 이 모델과 예시 궤적은 실로봇 AG145 설치, 손가락 구동, Payload/TCP 설정 또는 안전 경로를 검증한 결과가 아닙니다. Real Mode에서 AG145를 지정해도 기존 읽기 전용 로깅 및 이동 차단 정책이 적용됩니다.
 
+### mDPG_1S1 공압 흡착 그리퍼
+
+첨부된 `mdpg_1s1_description`의 STL/Xacro를 A0509 `link_6`에 고정 연결했습니다. 활성 URDF는 `sdml_a0509_description/urdf/a0509_with_gripper.urdf.xacro`이며, `gripper_type:=ag145|mdpg_1s1|none`으로 하나만 선택합니다. MuJoCo 기본 launch도 같은 값을 받아 선택된 시각 모델을 장착합니다.
+
+공압 그리퍼의 장착 위치·회전은 제공된 STEP으로 확인할 수 없으므로 `mdpg_mount_xyz`(m)와 `mdpg_mount_rpy`(rad)를 명시해야 합니다. 누락하면 launch가 거부합니다. `mdpg_tcp`의 -90 mm는 CAD 외곽 기준 잠정 값이며 보정된 실제 TCP가 아닙니다. MuJoCo에는 메시만 넣고 **질량·관성·접촉·흡착력을 넣지 않았습니다**. `mdpg_1s1_description/config/dynamics_values_to_measure.yaml`에 물리량과 공압 IO의 TODO가 남아 있습니다.
+
+```bash
+# 측정된 link_6 장착 변환으로 치환할 것. 숫자 0을 실제 장착값으로 가정하지 말 것.
+ros2 launch sdml_a0509_bringup rviz_only.launch.py gripper_type:=mdpg_1s1 mdpg_mount_xyz:="<X Y Z>" mdpg_mount_rpy:="<R P Y>"
+ros2 launch a0509_mujoco_sim mujoco_sim.launch.py gripper_type:=mdpg_1s1 mdpg_mount_xyz:="<X Y Z>" mdpg_mount_rpy:="<R P Y>"
+ros2 run a0509_dynamics_experiment run_experiment --preview --trajectory T1 --gripper-type mdpg_1s1 --mdpg-mount-xyz X Y Z --mdpg-mount-rpy R P Y
+```
+
+실로봇의 `a0509_real.launch.py gripper_type:=mdpg_1s1`은 AG145 구동/피킹 노드 없이 RT 상태 발행과 RViz를 사용합니다. 실제 접속은 검증하지 않았습니다. `run_experiment --simulation --gripper-type mdpg_1s1`의 **동역학 기록**과 `--execute`는 물리 파라미터·공압 IO·장착/안전 검증이 없어서 차단합니다.
+
 ## 결과와 데이터 의미
 
 `results/<preview|simulation|real>/<T1..T4>/trial_001/`에 `trajectory.csv`, `trajectory.json`, `waypoints.csv`, `trajectory_3d.png`, `trajectory_3d.html`, `metadata.json`을 기록합니다. Simulation과 Real은 `dynamics.csv`, `dynamics_plot.png`, `rosbag/`도 기록합니다. `--record-video`를 지정하면 `simulation.mp4`가 추가됩니다. `trial_id`와 Bag 경로는 metadata에 연결됩니다. 결과 폴더는 Git에서 제외합니다.

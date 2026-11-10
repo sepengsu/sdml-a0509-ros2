@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.8)
+project(mdpg_1s1_description)
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+ament_python_install_package(${PROJECT_NAME})
+install(DIRECTORY urdf meshes launch rviz config DESTINATION share/${PROJECT_NAME})
+ament_package()
