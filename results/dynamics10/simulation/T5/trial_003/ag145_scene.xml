@@ -1,0 +1,119 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="a0509 scene">
+  <compiler angle="radian" />
+  <statistic center="0.3 0 0.4" extent="1" />
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
+    <rgba haze="0.15 0.25 0.35 1" />
+    <global azimuth="120" elevation="-20" />
+  </visual>
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072" />
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
+    <mesh name="A0509_0_0" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_0_0.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_1_0" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_1_0.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_1_1" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_1_1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_1_2" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_1_2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_2_0" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_2_0.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_2_1" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_2_1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_2_2" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_2_2.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_3_0" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_3_0.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_3_1" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_3_1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_4_0" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_4_0.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_4_1" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_4_1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_5_0" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_5_0.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_5_1" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_5_1.stl" scale="0.001 0.001 0.001" />
+    <mesh name="A0509_6_0" file="/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/assets/A0509_6_0.stl" scale="0.001 0.001 0.001" />
+    <material name="blue" rgba="0.227 0.251 0.31 1" />
+    <material name="metal" rgba="0.65 0.65 0.65 1" />
+    <material name="sky_blue" rgba="0.016 0.933 0.992 1.0" />
+    <mesh name="ag145_base_link" file="/ros2_ws/results/dynamics10/simulation/T5/trial_003/ag145_meshes/base_link.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ag145_body" file="/ros2_ws/results/dynamics10/simulation/T5/trial_003/ag145_meshes/body.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ag145_left_outer_knuckle" file="/ros2_ws/results/dynamics10/simulation/T5/trial_003/ag145_meshes/left_outer_knuckle.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ag145_left_finger" file="/ros2_ws/results/dynamics10/simulation/T5/trial_003/ag145_meshes/left_finger.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ag145_left_inner_knuckle" file="/ros2_ws/results/dynamics10/simulation/T5/trial_003/ag145_meshes/left_inner_knuckle.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ag145_right_outer_knuckle" file="/ros2_ws/results/dynamics10/simulation/T5/trial_003/ag145_meshes/right_outer_knuckle.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ag145_right_finger" file="/ros2_ws/results/dynamics10/simulation/T5/trial_003/ag145_meshes/right_finger.stl" scale="0.001 0.001 0.001" />
+    <mesh name="ag145_right_inner_knuckle" file="/ros2_ws/results/dynamics10/simulation/T5/trial_003/ag145_meshes/right_inner_knuckle.stl" scale="0.001 0.001 0.001" />
+  </asset>
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true" />
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" />
+    <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_0_0" material="metal" />
+    <body name="link_1" pos="0 0 0.1560">
+      <inertial pos="-6.9e-05 0.024423 -0.007375" quat="0.626042 0.779776 -0.00329495 0.00321293" mass="3.715" diaginertia="0.0189902 0.017021 0.0135698" />
+      <joint name="joint_1" pos="0 0 0" axis="0 0 1" range="-6.2832 6.2832" actuatorfrcrange="-194 194" damping="800" />
+      <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_1_0" material="metal" />
+      <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_1_1" material="blue" />
+      <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_1_2" material="sky_blue" />
+      <body name="link_2" quat="0.499898 -0.500102 -0.5 -0.5">
+        <inertial pos="0.20449 0 0.13271" quat="0.499405 0.500811 0.499197 0.500585" mass="6.837" diaginertia="0.25627 0.25442 0.019399" />
+        <joint name="joint_2" pos="0 0 0" axis="0 0 1" range="-6.2832 6.2832" actuatorfrcrange="-194 194" damping="800" />
+        <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_2_0" material="blue" />
+        <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_2_1" material="blue" />
+        <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_2_2" material="blue" />
+        <body name="link_3" pos="0.409 0 0" quat="0.707035 0 0 0.707179">
+          <inertial pos="7.1e-05 -0.005123 0.033009" quat="0.704152 -0.0338098 0.031631 0.708538" mass="2.769" diaginertia="0.013912 0.012526 0.00877466" />
+          <joint name="joint_3" pos="0 0 0" axis="0 0 1" range="-2.7925 2.7925" actuatorfrcrange="-163 163" damping="800" />
+          <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_3_0" material="metal" />
+          <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_3_1" material="blue" />
+          <body name="link_4" pos="0 -0.367 0" quat="0.707035 0.707179 0 0">
+            <inertial pos="-8.6e-05 0.086348 -0.086031" quat="0.983575 -0.180483 0.000213119 0.00238692" mass="2.679" diaginertia="0.0560681 0.0528175 0.00763342" />
+            <joint name="joint_4" pos="0 0 0" axis="0 0 1" range="-6.2832 6.2832" actuatorfrcrange="-50 50" damping="600" />
+            <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_4_0" material="blue" />
+            <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_4_1" material="blue" />
+            <body name="link_5" quat="0.707035 -0.707179 0 0">
+              <inertial pos="9.1e-05 -0.006457 0.015434" quat="0.480275 0.522032 -0.522242 0.473372" mass="2.051" diaginertia="0.0104696 0.00907878 0.00845556" />
+              <joint name="joint_5" pos="0 0 0" axis="0 0 1" range="-6.2832 6.2832" actuatorfrcrange="-50 50" damping="600" />
+              <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_5_0" material="metal" />
+              <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_5_1" material="blue" />
+              <body name="link_6" pos="0 -0.124 0" quat="0.707035 0.707179 0 0">
+                <inertial pos="-2.2e-05 -7e-06 -0.051746" quat="0.999989 0.00141825 -0.000201627 0.0044558" mass="0.773" diaginertia="0.00874837 0.00785656 0.00444517" />
+                <joint name="joint_6" pos="0 0 0" axis="0 0 1" range="-6.2832 6.2832" actuatorfrcrange="-50 50" damping="600" />
+                <geom type="mesh" contype="1" conaffinity="1" group="1" density="0" mesh="A0509_6_0" material="metal" />
+                <body name="ag145_base_link" pos="0 0 0" quat="0.923879532511 0 0 0.382683432366">
+                  <inertial pos="0 0 0.10" mass="1.3" diaginertia="0.0073 0.0050 0.0033" />
+                  <site name="ag145_tcp" pos="0 0 0.20" size="0.006" rgba="1 0.2 0.1 1" />
+                  <geom name="ag145_body_collision" type="box" pos="0 0 0.075" size="0.035 0.035 0.075" density="0" rgba="0 0 0 0" contype="1" conaffinity="1" />
+                  <geom name="ag145_left_finger_collision" type="box" pos="-0.065 0 0.175" size="0.012 0.018 0.028" density="0" rgba="0 0 0 0" contype="1" conaffinity="1" />
+                  <geom name="ag145_right_finger_collision" type="box" pos="0.065 0 0.175" size="0.012 0.018 0.028" density="0" rgba="0 0 0 0" contype="1" conaffinity="1" />
+                  <geom name="ag145_base_link_visual" type="mesh" mesh="ag145_base_link" density="0" contype="0" conaffinity="0" pos="0 0 0" quat="9.38188636534e-07 9.38182700826e-07 0.707104544323 0.707109018042" rgba="0.792 0.819 0.933 1" />
+                  <body name="ag145_body_link" pos="0 0 0.0" quat="1 0 0 0">
+                    <geom name="ag145_body_link_visual" type="mesh" mesh="ag145_body" density="0" contype="0" conaffinity="0" pos="0.00389 0.00075 0.05048" quat="9.38188636534e-07 9.38182700826e-07 0.707104544323 0.707109018042" rgba="0.1 0.1 0.1 1" />
+                    <body name="ag145_left_outer_knuckle" pos="-0.03592 0.0 0.09834" quat="1 0 0 0">
+                      <geom name="ag145_left_outer_knuckle_visual" type="mesh" mesh="ag145_left_outer_knuckle" density="0" contype="0" conaffinity="0" pos="0.03981 0.00075 -0.04785" quat="9.38188636534e-07 9.38182700826e-07 0.707104544323 0.707109018042" rgba="0.1 0.1 0.1 1" />
+                      <body name="ag145_left_finger" pos="-0.06400 0.0 0.05818" quat="1 0 0 0">
+                        <geom name="ag145_left_finger_visual" type="mesh" mesh="ag145_left_finger" density="0" contype="0" conaffinity="0" pos="0.01917854988 0 0.00752444316" quat="9.38188636534e-07 9.38182700826e-07 0.707104544323 0.707109018042" rgba="0.792 0.819 0.933 1" />
+                      </body>
+                    </body>
+                    <body name="ag145_left_inner_knuckle" pos="-0.01674 0.0 0.10586" quat="1 0 0 0">
+                      <geom name="ag145_left_inner_knuckle_visual" type="mesh" mesh="ag145_left_inner_knuckle" density="0" contype="0" conaffinity="0" pos="-0.01432 0 0.01004" quat="-0.287915137861 0.287918673235 -0.645833355548 -0.645838205632" rgba="0.1 0.1 0.1 1" />
+                    </body>
+                    <body name="ag145_right_outer_knuckle" pos="0.03592 0.0 0.09834" quat="1 0 0 0">
+                      <geom name="ag145_right_outer_knuckle_visual" type="mesh" mesh="ag145_right_outer_knuckle" density="0" contype="0" conaffinity="0" pos="-0.03203 0.00075 -0.04785" quat="9.38188636534e-07 9.38182700826e-07 0.707104544323 0.707109018042" rgba="0.1 0.1 0.1 1" />
+                      <body name="ag145_right_finger" pos="0.06400 0.0 0.05818" quat="1 0 0 0">
+                        <geom name="ag145_right_finger_visual" type="mesh" mesh="ag145_right_finger" density="0" contype="0" conaffinity="0" pos="-0.01917854988 0 0.00752444316" quat="0.707109018043 0.707104544323 0 0" rgba="0.792 0.819 0.933 1" />
+                      </body>
+                    </body>
+                    <body name="ag145_right_inner_knuckle" pos="0.01674 0.0 0.10586" quat="1 0 0 0">
+                      <geom name="ag145_right_inner_knuckle_visual" type="mesh" mesh="ag145_right_inner_knuckle" density="0" contype="0" conaffinity="0" pos="0.01432 0 0.01004" quat="0.645837823627 0.645833737557 0.287917816346 -0.287915994755" rgba="0.1 0.1 0.1 1" />
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <position joint="joint_1" kp="10" kv="1" ctrlrange="-6.2832 6.2832" />
+    <position joint="joint_2" kp="10" kv="1" ctrlrange="-6.2832 6.2832" />
+    <position joint="joint_3" kp="10" kv="1" ctrlrange="-2.7925 2.7925" />
+    <position joint="joint_4" kp="10" kv="1" ctrlrange="-6.2832 6.2832" />
+    <position joint="joint_5" kp="10" kv="1" ctrlrange="-6.2832 6.2832" />
+    <position joint="joint_6" kp="10" kv="1" ctrlrange="-6.2832 6.2832" />
+  </actuator>
+</mujoco>

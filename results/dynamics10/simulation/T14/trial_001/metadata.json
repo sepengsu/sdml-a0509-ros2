@@ -1,0 +1,475 @@
+{
+  "schema_version": "1.0",
+  "created_utc": "2026-11-10T09:53:13.965780+00:00",
+  "trajectory_id": "T14",
+  "trial_id": "trial_001",
+  "mode": "simulation",
+  "trajectory_config": {
+    "trajectory_id": "T14",
+    "reference_tcp_mm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "start_mm": [
+      0,
+      0,
+      0
+    ],
+    "end_mm": null,
+    "joint_start_rad": [
+      -0.65,
+      -0.35,
+      1.45,
+      -0.16,
+      -0.45,
+      -0.1
+    ],
+    "joint_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "joint_mode": "sequential",
+    "joint_amplitude_deg": 5.0,
+    "speed": "low",
+    "segment_seconds": null,
+    "repeats": 1,
+    "pre_hold_seconds": 1.0,
+    "post_hold_seconds": 1.0,
+    "sample_hz": 100
+  },
+  "joint_order": [
+    "joint_1",
+    "joint_2",
+    "joint_3",
+    "joint_4",
+    "joint_5",
+    "joint_6"
+  ],
+  "units": {
+    "q": "rad",
+    "dq": "rad/s",
+    "ddq": "rad/s^2",
+    "target_q": "rad",
+    "tcp_position": "mm",
+    "torque": "Nm",
+    "timestamp": "UTC Unix seconds",
+    "ros_time_s": "ROS clock seconds"
+  },
+  "time_sync": "JointState header and ros_time_s use MuJoCo simulation time; callback arrival time is used for freshness. Bag storage timestamps use wall time.",
+  "filtering": "none",
+  "missing_data": "Blank CSV cells mean unavailable or stale measurements.",
+  "safety": "Trajectory dimensions are unvalidated research examples and are never sufficient for real motion approval.",
+  "quality": {
+    "joint_states": {
+      "received": 2425,
+      "observed_hz": 99.98350107655435,
+      "gap_estimated_missing": 0,
+      "estimated_missing_rate": 0.0,
+      "max_gap_s": 0.011999999000000372,
+      "time_basis": "message_header_sim_time",
+      "wall_arrival_hz": 46.54221389765011,
+      "wall_arrival_max_gap_s": 0.3284294469995075
+    },
+    "rows_written": 1701,
+    "blank_field_counts": {
+      "q1": 0,
+      "dq1": 0,
+      "ddq1": 0,
+      "tcp_position": 0,
+      "actual_motor_torque": 1701,
+      "qfrc_inverse": 0
+    }
+  },
+  "ros_domain_id": 173,
+  "gripper_type": "ag145",
+  "payload_mass_kg": 0.0,
+  "rosbag": "/ros2_ws/results/dynamics10/simulation/T14/trial_001/rosbag",
+  "rosbag_relative_path": "rosbag",
+  "sim_model": "ag145_scene.xml (generated from dsr_description2 A0509 and dh_ag145_description)",
+  "gripper_model": {
+    "configuration": "fixed open pose",
+    "mass_kg": 1.3,
+    "inertia": "uncalibrated box approximation",
+    "collision": "approximate bounding boxes",
+    "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion",
+    "tcp_site": "ag145_tcp",
+    "tcp_offset_mm": [
+      0.0,
+      0.0,
+      200.0
+    ],
+    "tcp_calibrated": false
+  },
+  "physics_source": "Separate MuJoCo model reconstructed from measured q/dq/ddq; qfrc_actuator unavailable from upstream bridge",
+  "acceleration_method": "least-squares slope of up to five unique JointState velocities in ROS simulation time; blank until three samples or when velocity unavailable",
+  "acceleration_filter_samples": 5,
+  "trajectory_kind": "joint",
+  "dynamics10": {
+    "name": "shifted-posture mixed excitation",
+    "duration_s": 15.0,
+    "split": "test",
+    "home_rad": [
+      -0.65,
+      -0.35,
+      1.45,
+      -0.16,
+      -0.45,
+      -0.1
+    ],
+    "seed": 20261110,
+    "components": [
+      {
+        "joint": 2,
+        "amplitude_deg": 5.0,
+        "f0_hz": 0.18,
+        "f1_hz": 0.18,
+        "phase_rad": 0.3,
+        "window_s": [
+          0.0,
+          5.0
+        ]
+      },
+      {
+        "joint": 4,
+        "amplitude_deg": 5.0,
+        "f0_hz": 0.24,
+        "f1_hz": 0.24,
+        "phase_rad": 0.9,
+        "window_s": [
+          5.0,
+          10.0
+        ]
+      },
+      {
+        "joint": 1,
+        "amplitude_deg": 4.0,
+        "f0_hz": 0.16,
+        "f1_hz": 0.16,
+        "phase_rad": 0.2,
+        "window_s": [
+          10.0,
+          15.0
+        ]
+      },
+      {
+        "joint": 5,
+        "amplitude_deg": 4.0,
+        "f0_hz": 0.28,
+        "f1_hz": 0.28,
+        "phase_rad": 1.1,
+        "window_s": [
+          10.0,
+          15.0
+        ]
+      },
+      {
+        "joint": 6,
+        "amplitude_deg": 3.0,
+        "f0_hz": 0.35,
+        "f1_hz": 0.35,
+        "phase_rad": 1.6,
+        "window_s": [
+          10.0,
+          15.0
+        ]
+      }
+    ]
+  },
+  "preflight": {
+    "validated_samples": 1701,
+    "contact_checks": 1701,
+    "position_min_rad": [
+      -0.714156691421236,
+      -0.43726635188854573,
+      1.45,
+      -0.2472661299452426,
+      -0.5198119793227591,
+      -0.1523570708927112
+    ],
+    "position_max_rad": [
+      -0.5801872760986294,
+      -0.2627342730827029,
+      1.45,
+      -0.08927839403219082,
+      -0.38018693070629495,
+      -0.04764201189985267
+    ],
+    "peak_velocity_rad_s": [
+      0.13149268236076087,
+      0.16496790079017318,
+      0.0,
+      0.16021492302303014,
+      0.14102081860159502,
+      0.11536747693650455
+    ],
+    "peak_acceleration_rad_s2": [
+      0.48395650829018544,
+      0.5325390859166891,
+      0.0,
+      0.7224788888380183,
+      0.6099166061553037,
+      0.5613600284823269
+    ],
+    "position_limits_rad": [
+      [
+        -3.14,
+        3.14
+      ],
+      [
+        -1.3,
+        1.3
+      ],
+      [
+        -2.0,
+        2.0
+      ],
+      [
+        -3.14,
+        3.14
+      ],
+      [
+        -2.0,
+        2.0
+      ],
+      [
+        -3.14,
+        3.14
+      ]
+    ],
+    "velocity_limits_rad_s": [
+      3.67,
+      3.32,
+      3.67,
+      6.98,
+      6.98,
+      10.47
+    ],
+    "acceleration_limits_rad_s2": [
+      0.734,
+      0.664,
+      0.734,
+      1.396,
+      1.396,
+      2.094
+    ],
+    "limits_source": "a0509_mujoco_sim/config/joint_limits.yaml",
+    "valid_for_real_robot": false
+  },
+  "execution_success": true,
+  "sample_count": 1701,
+  "sim_initialization": "Joint experiment start posture reached by a 6 s quintic setup move, checked for contact; setup is outside recorded trajectory",
+  "torque_definitions": {
+    "actual_motor_torque": "DRFL motor-current/gear conversion [Nm], not an independent torque sensor",
+    "actual_joint_torque": "DRFL controller-estimated joint torque [Nm], not an independent torque sensor",
+    "external_joint_torque": "DRFL controller-estimated external joint torque [Nm]",
+    "qfrc_inverse": "MuJoCo inverse-dynamics generalized force [Nm for hinge DOFs]",
+    "qfrc_actuator": "MuJoCo actuator generalized force [Nm for hinge DOFs] when directly available",
+    "qfrc_applied": "MuJoCo externally applied generalized force [Nm for hinge DOFs] if ROS JointState effort is exported",
+    "qfrc_bias": "MuJoCo bias generalized force [Nm for hinge DOFs]"
+  },
+  "validation": "IK position/orientation convergence and conservative joint limits; no physical robot involved",
+  "video": null,
+  "data_quality": {
+    "samples": 1701,
+    "planned_samples": 1701,
+    "complete_joint_and_torque_samples": 1701,
+    "missing_or_nonfinite_counts": {
+      "q": 0,
+      "dq": 0,
+      "ddq": 0,
+      "target_q": 0,
+      "qfrc_inverse": 0
+    },
+    "sim_time_strictly_increasing": true,
+    "sim_time_dt_median_s": 0.009999999999999787,
+    "sim_time_dt_max_s": 0.019999999999999574,
+    "observed_hz": 100.0,
+    "target_tracking_abs_max_rad": 0.03836980559961822,
+    "target_tracking_rmse_rad": 0.02237753676769665,
+    "position_rad": {
+      "min": [
+        -0.7058482929515935,
+        -0.43184408578431965,
+        1.4568138540068853,
+        -0.24266502926662273,
+        -0.5132262323567804,
+        -0.1464500471497057
+      ],
+      "max": [
+        -0.5843618651429725,
+        -0.2671777933135861,
+        1.4584969075781276,
+        -0.10173525221816151,
+        -0.38465944110255224,
+        -0.05369936877161806
+      ],
+      "rms": [
+        0.6472730726674597,
+        0.34958939731047,
+        1.4575555978791566,
+        0.1635214915957825,
+        0.44819333606805806,
+        0.10282234999359458
+      ],
+      "abs_max": [
+        0.7058482929515935,
+        0.43184408578431965,
+        1.4584969075781276,
+        0.24266502926662273,
+        0.5132262323567804,
+        0.1464500471497057
+      ]
+    },
+    "velocity_rad_s": {
+      "min": [
+        -0.06610305317793833,
+        -0.09438695332433814,
+        -0.000917602703300515,
+        -0.11914491918688759,
+        -0.10411778218541234,
+        -0.09994740327630021
+      ],
+      "max": [
+        0.08327625704504929,
+        0.11549758440430845,
+        0.0008329636342315003,
+        0.12176001850854591,
+        0.11129477902011467,
+        0.10001307771998005
+      ],
+      "rms": [
+        0.028014533488752463,
+        0.03846572322249647,
+        0.00030957929104825856,
+        0.04560575568827182,
+        0.03863829833615466,
+        0.03386817126084327
+      ],
+      "abs_max": [
+        0.08327625704504929,
+        0.11549758440430845,
+        0.000917602703300515,
+        0.12176001850854591,
+        0.11129477902011467,
+        0.10001307771998005
+      ]
+    },
+    "acceleration_rad_s2": {
+      "min": [
+        -0.16582010691330612,
+        -0.2125081686338379,
+        -0.003862347019277075,
+        -0.48535808022890936,
+        -0.37360680442948385,
+        -0.28477680868018396
+      ],
+      "max": [
+        0.28530855133133765,
+        0.3476856924441634,
+        0.008270098080182116,
+        0.42664684683425697,
+        0.27945674848731566,
+        0.3768705944565054
+      ],
+      "rms": [
+        0.0599054468190072,
+        0.07867488357509593,
+        0.0009014166769300247,
+        0.1166186608924879,
+        0.09526410731453523,
+        0.09250556831870137
+      ],
+      "abs_max": [
+        0.28530855133133765,
+        0.3476856924441634,
+        0.008270098080182116,
+        0.48535808022890936,
+        0.37360680442948385,
+        0.3768705944565054
+      ]
+    },
+    "inverse_torque_nm": {
+      "min": [
+        -52.8854366102377,
+        -80.299035284333,
+        -23.69445565806719,
+        -68.98018810062217,
+        -64.57321256075065,
+        -59.96835366403748
+      ],
+      "max": [
+        66.64811578231193,
+        87.958180802008,
+        -20.74188744754002,
+        75.55631843962347,
+        64.6460219577988,
+        60.00755681638934
+      ],
+      "rms": [
+        22.4137261532206,
+        31.19180040480948,
+        22.45557623398449,
+        27.477284881056168,
+        23.281687944249743,
+        20.32092893350533
+      ],
+      "abs_max": [
+        66.64811578231193,
+        87.958180802008,
+        23.69445565806719,
+        75.55631843962347,
+        64.6460219577988,
+        60.00755681638934
+      ]
+    },
+    "limit_violation_counts": {
+      "position": 0,
+      "velocity": 0,
+      "acceleration": 0
+    },
+    "planned_phase_samples": {
+      "pre_hold": 101,
+      "motion": 1500,
+      "post_hold": 100
+    },
+    "qfrc_inverse_semantics": "reconstructed MuJoCo inverse dynamics, not a physical torque sensor",
+    "pass": true
+  },
+  "git_commit_at_audit": "cd5f49fcf0c46fd0fc5ac7db1fb34a44b58f3bbf",
+  "ag145_model_parameters": {
+    "mount_pos_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "mount_quat_wxyz": [
+      0.923879532511,
+      0.0,
+      0.0,
+      0.382683432366
+    ],
+    "mass_kg": 1.3,
+    "com_local_m": [
+      0.0,
+      0.0,
+      0.1
+    ],
+    "diagonal_inertia_local_kg_m2": [
+      0.0073,
+      0.005,
+      0.0033
+    ],
+    "tcp_local_m": [
+      0.0,
+      0.0,
+      0.2
+    ],
+    "calibrated": false
+  },
+  "dataset_split": "test"
+}
