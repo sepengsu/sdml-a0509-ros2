@@ -1,0 +1,23 @@
+{
+  "urdf_source": "/ros2_ws/src/doosan-robot2/dsr_description2/urdf/a0509.urdf",
+  "urdf_sha256": "fc1541ff6acb04e503174c6817c0b0fb721a342a0a7fa85e55be5cf5297a0742",
+  "mjcf_source": "/ros2_ws/src/doosan-robot2/dsr_description2/mujoco_models/a0509/scene.xml",
+  "mjcf_sha256": "49407388eb6a0def5be483143bbbbc3145f655124e702b1889bbe0cf48b8d9f5",
+  "pose_rad": [
+    -0.5,
+    -0.5,
+    1.6,
+    0.0,
+    -0.6,
+    0.0
+  ],
+  "urdf_render_note": "Original URDF links/transforms/inertia; matching A0509 STL visual geometry used because MuJoCo cannot read package:// DAE URLs directly.",
+  "mjcf_render_note": "Original MuJoCo scene and material colors.",
+  "images": [
+    "a0509_urdf.png",
+    "a0509_mjcf.png",
+    "a0509_urdf_vs_mjcf_16x9.png",
+    "a0509_urdf_transparent.png",
+    "a0509_mjcf_transparent.png"
+  ]
+}
