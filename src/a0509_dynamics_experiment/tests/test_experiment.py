@@ -204,10 +204,39 @@ def test_mdpg_preview_is_visual_only_and_requires_mount(tmp_path):
                  "--segment-seconds", "0.2", "--pre-hold", "0", "--post-hold", "0"]) == 0
     folder = tmp_path / "preview" / "T1" / "trial_001"
     metadata = json.loads((folder / "metadata.json").read_text())
-    assert metadata["gripper_model"]["mass_kg"] is None
+    assert metadata["gripper_model"]["mass_kg"] == 0.62
+    assert metadata["gripper_model"]["dynamics_model"] == "visual"
     assert metadata["gripper_model"]["pneumatic_io"] is None
     assert metadata["gripper_model"]["mount_verified"] is False
     assert (folder / "mdpg_scene.xml").is_file()
+
+
+def test_mdpg_box_opt_in_preview_and_simulation_dispatch(tmp_path, monkeypatch):
+    pytest.importorskip("mujoco")
+    from a0509_dynamics_experiment import simulation_executor
+    mount = ["--mdpg-mount-xyz", "0", "0", "0", "--mdpg-mount-rpy", "0", "0", "0"]
+    options = ["--gripper-type", "mdpg_1s1", "--mdpg-dynamics-model", "box_approx", *mount]
+    assert main(["--preview", "--trajectory", "T1", *options,
+                 "--results-dir", str(tmp_path), "--sample-hz", "10",
+                 "--segment-seconds", "0.2", "--pre-hold", "0", "--post-hold", "0"]) == 0
+    folder = tmp_path / "preview/T1/trial_001"
+    metadata = json.loads((folder / "metadata.json").read_text())
+    assert metadata["gripper_model"]["modeled_mass_kg"] == 0.62
+    assert metadata["gripper_model"]["dynamics_model"] == "box_approx"
+    assert sum(MujocoObserver(folder / "mdpg_scene.xml", tcp_site="mdpg_tcp").model.body_mass) > 19
+
+    seen = {}
+    def fake_execute(*args, **kwargs):
+        seen.update(gripper_type=args[2], **kwargs)
+        return tmp_path
+    monkeypatch.setattr(simulation_executor, "execute", fake_execute)
+    assert main(["--simulation", "--trajectory", "T1", *options]) == 0
+    assert seen["gripper_type"] == "mdpg_1s1"
+    assert seen["mdpg_dynamics_model"] == "box_approx"
+    assert seen["mdpg_mount_xyz"] == [0, 0, 0]
+    with pytest.raises(SystemExit):
+        main(["--simulation", "--trajectory", "T1", *options,
+              "--payload-mass", "1.5"])
 
 
 @pytest.mark.parametrize("trajectory_id", ["T1", "T2", "T3"])

@@ -22,6 +22,11 @@ def _select_scene(context):
     requested = LaunchConfiguration('mujoco_model_path').perform(context)
     mount_xyz = LaunchConfiguration('mdpg_mount_xyz').perform(context)
     mount_rpy = LaunchConfiguration('mdpg_mount_rpy').perform(context)
+    dynamics_model = LaunchConfiguration('mdpg_dynamics_model').perform(context)
+    if dynamics_model not in ('visual', 'box_approx'):
+        raise RuntimeError(f'Unsupported mdpg_dynamics_model: {dynamics_model}')
+    if gripper != 'mdpg_1s1' and dynamics_model != 'visual':
+        raise RuntimeError('mdpg_dynamics_model requires gripper_type:=mdpg_1s1')
     if gripper == 'mdpg_1s1' and ('TODO' in mount_xyz or 'TODO' in mount_rpy):
         raise RuntimeError('mDPG mounting transform is TODO; pass measured mdpg_mount_xyz and mdpg_mount_rpy')
     if requested != 'auto':
@@ -32,6 +37,10 @@ def _select_scene(context):
             {'mdpg_tcp'} if gripper == 'mdpg_1s1' else set())
         if present != expected:
             raise RuntimeError(f'MuJoCo scene tool {present} differs from gripper_type {gripper}')
+        if gripper == 'mdpg_1s1':
+            has_inertia = root.find(".//body[@name='mdpg_base_link']/inertial") is not None
+            if has_inertia != (dynamics_model == 'box_approx'):
+                raise RuntimeError('mDPG scene inertia differs from mdpg_dynamics_model')
         return [SetLaunchConfiguration('resolved_mujoco_model_path', requested)]
     if gripper == 'none':
         from ament_index_python.packages import get_package_share_directory
@@ -44,7 +53,7 @@ def _select_scene(context):
             build_ag145_scene(scene)
         else:
             from mdpg_1s1_description.model import build_mdpg_scene
-            build_mdpg_scene(scene, mount_xyz, mount_rpy)
+            build_mdpg_scene(scene, mount_xyz, mount_rpy, dynamics_model=dynamics_model)
     return [SetLaunchConfiguration('resolved_mujoco_model_path', str(scene))]
 
 ARGUMENTS = [
@@ -55,6 +64,7 @@ ARGUMENTS = [
     DeclareLaunchArgument('gripper_type', default_value='none', description='none | ag145 | mdpg_1s1'),
     DeclareLaunchArgument('mdpg_mount_xyz', default_value='TODO_MEASURE', description='Measured link_6 to mDPG xyz in metres'),
     DeclareLaunchArgument('mdpg_mount_rpy', default_value='TODO_MEASURE', description='Measured link_6 to mDPG rpy in radians'),
+    DeclareLaunchArgument('mdpg_dynamics_model', default_value='visual', description='visual | box_approx (simulation estimate)'),
     DeclareLaunchArgument('mujoco_model_path', default_value='auto', description='Optional explicit MuJoCo scene XML'),
 ]
 
@@ -82,6 +92,7 @@ def generate_launch_description():
             ' gripper_type:=', LaunchConfiguration('gripper_type'),
             " mdpg_mount_xyz:='", LaunchConfiguration('mdpg_mount_xyz'), "'",
             " mdpg_mount_rpy:='", LaunchConfiguration('mdpg_mount_rpy'), "'",
+            ' mdpg_dynamics_model:=', LaunchConfiguration('mdpg_dynamics_model'),
         ]
     )
     robot_description = {'robot_description': robot_description_content}

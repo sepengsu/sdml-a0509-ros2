@@ -21,9 +21,18 @@
     "mounting_face_raw_cad_z_m": 0.0,
     "nominal_tcp_verified": false
   },
-  "mass_kg": null,
+  "mass_kg": 0.62,
+  "mass_source": "user-supplied DC PNEUMATIC GRIPPER_1 specification image; gripper only, adapter excluded",
+  "max_payload_rating_kg": 1.5,
+  "with_pad_dimensions_m": [0.065, 0.070, 0.081],
   "center_of_mass_m": null,
   "inertia_kg_m2": null,
+  "simulation_box_approximation": {
+    "opt_in_only": true,
+    "assumption": "uniform-density cuboid with the supplied with-pad dimensions",
+    "assumed_center_of_mass_m": [0, 0, 0.0405],
+    "assumed_diagonal_inertia_kg_m2": [0.000592151666666667, 0.000557276666666667, 0.000471458333333333]
+  },
   "notes": [
     "Geometry only; no material density, sensor I/O, pneumatic parameters or verified physical mass/inertia present in STEP",
     "Air pad provided as two solids; no articulated fingers or moving joints inferred",

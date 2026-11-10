@@ -78,6 +78,12 @@ ros2 control list_controllers
 
 ### Tool selection
 
-`gripper_type:=none|ag145|mdpg_1s1` selects both the active A0509 Xacro in `sdml_a0509_description` and the MuJoCo scene. AG145 uses the existing experiment scene builder. mDPG uses the ZIP-derived CAD meshes attached as a massless visual frame on `link_6`; it has no modeled suction, contact force, mass or inertia. This scene is suitable for visualization only, not gripper dynamics data or PKAN training.
+`gripper_type:=none|ag145|mdpg_1s1` selects both the active A0509 Xacro in `sdml_a0509_description` and the MuJoCo scene. AG145 uses the existing experiment scene builder. mDPG uses the ZIP-derived CAD meshes on `link_6`. Its default `mdpg_dynamics_model:=visual` is massless. Set `mdpg_dynamics_model:=box_approx` explicitly to add the 0.62 kg mass from the user-provided product image and a uniform 65 × 70 × 81 mm box inertia estimate. The center of mass and inertia are **assumptions**, not measurements. Neither mode models suction, contact force, attached payload or pneumatic I/O. Keep synthetic results separate from real measurements and calibrated PKAN ground truth.
 
 The mDPG mounting pose is unknown. Supply measured `mdpg_mount_xyz` (metres) and `mdpg_mount_rpy` (radians); leaving either as `TODO_MEASURE` causes launch to fail. `mdpg_tcp` is the uncalibrated CAD-bounds estimate. See `mdpg_1s1_description/config/dynamics_values_to_measure.yaml` for remaining physical and pneumatic IO TODOs.
+
+```bash
+ros2 launch a0509_mujoco_sim mujoco_sim.launch.py gripper_type:=mdpg_1s1 \
+  mdpg_dynamics_model:=box_approx \
+  mdpg_mount_xyz:="<X_M> <Y_M> <Z_M>" mdpg_mount_rpy:="<R_RAD> <P_RAD> <Y_RAD>"
+```

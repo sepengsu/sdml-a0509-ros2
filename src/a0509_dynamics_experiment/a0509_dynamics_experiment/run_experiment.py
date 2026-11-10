@@ -44,8 +44,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="measured link_6 to mDPG origin in metres")
     parser.add_argument("--mdpg-mount-rpy", type=float, nargs=3, metavar=("R", "P", "Y"),
                         help="measured link_6 to mDPG orientation in radians")
+    parser.add_argument("--mdpg-dynamics-model", choices=["visual", "box_approx"], default="visual",
+                        help="explicit uniform-box inertia estimate for mDPG simulation only")
     parser.add_argument("--payload-mass", type=float, default=None,
-                        help="measured payload mass in kg; mDPG remains unknown when omitted")
+                        help="attached payload mass in kg; mDPG currently supports zero only")
     parser.add_argument("--sim-domain-id", type=int, default=173)
     parser.add_argument("--connect-existing", action="store_true", help="connect to existing MuJoCo in the isolated domain")
     parser.add_argument("--record-video", action="store_true", help="save an MP4 of the MuJoCo display")
@@ -63,10 +65,16 @@ def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None
             parser.error("mDPG mount is TODO; provide measured --mdpg-mount-xyz and --mdpg-mount-rpy")
         if not all(math.isfinite(value) for value in (*args.mdpg_mount_xyz, *args.mdpg_mount_rpy)):
             parser.error("mDPG mount values must be finite")
-        if args.simulation:
-            parser.error("mDPG MuJoCo is visual-only until mass/inertia are measured; trajectory dynamics recording is blocked")
+        if args.simulation and args.mdpg_dynamics_model != "box_approx":
+            parser.error("mDPG dynamics simulation requires --mdpg-dynamics-model box_approx (unvalidated estimate)")
+        if args.payload_mass not in (None, 0):
+            parser.error("mDPG payload is not included in the MuJoCo model; --payload-mass must be zero or omitted")
         if args.execute:
             parser.error("mDPG real motion is blocked until mount, TCP and pneumatic IO are validated")
+        if not (args.preview or args.simulation) and args.mdpg_dynamics_model != "visual":
+            parser.error("mDPG box_approx is simulation/preview only")
+    elif args.mdpg_dynamics_model != "visual":
+        parser.error("--mdpg-dynamics-model requires --gripper-type mdpg_1s1")
     if args.preview and args.execute:
         parser.error("--preview and --execute cannot be combined")
     if args.trajectory == "all" and not (args.preview or args.simulation):
@@ -104,8 +112,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _validate(parser, args)
-    payload_mass = args.payload_mass if args.payload_mass is not None else (
-        None if args.gripper_type == "mdpg_1s1" else 0.0)
+    payload_mass = args.payload_mass if args.payload_mass is not None else 0.0
     if args.simulation and args.execute:
         print("--simulation takes priority; --execute has no real-robot effect.", file=sys.stderr)
     ids = (DYNAMICS10_IDS if args.trajectory_set == "dynamics10" else
@@ -133,7 +140,9 @@ def main(argv: list[str] | None = None) -> int:
                         tcp_site = "ag145_tcp"
                     elif args.gripper_type == "mdpg_1s1":
                         from mdpg_1s1_description.model import build_mdpg_scene
-                        scene = build_mdpg_scene(folder / "mdpg_scene.xml", args.mdpg_mount_xyz, args.mdpg_mount_rpy)
+                        scene = build_mdpg_scene(folder / "mdpg_scene.xml", args.mdpg_mount_xyz,
+                                                 args.mdpg_mount_rpy,
+                                                 dynamics_model=args.mdpg_dynamics_model)
                         tcp_site = "mdpg_tcp"
                     else:
                         from .ag145_model import source_paths
@@ -166,9 +175,16 @@ def main(argv: list[str] | None = None) -> int:
                             "tcp_calibrated": False,
                         }
                     elif args.gripper_type == "mdpg_1s1":
-                        preview_details["preview_note"] = "mDPG CAD geometry only; nominal TCP and supplied mount are uncalibrated; no ROS connection."
+                        from mdpg_1s1_description.model import SPEC_MASS_KG, SPEC_MAX_PAYLOAD_KG
+                        preview_details["preview_note"] = ("mDPG CAD visual and optional box mass estimate; "
+                                                           "nominal TCP and supplied mount are uncalibrated; no ROS connection.")
                         preview_details["gripper_model"] = {
-                            "mass_kg": None, "inertia": None, "pneumatic_io": None,
+                            "mass_kg": SPEC_MASS_KG, "mass_source": "user-supplied product specification image",
+                            "max_payload_rating_kg": SPEC_MAX_PAYLOAD_KG,
+                            "dynamics_model": args.mdpg_dynamics_model,
+                            "modeled_mass_kg": (SPEC_MASS_KG if args.mdpg_dynamics_model == "box_approx" else 0.0),
+                            "inertia": ("uniform-box estimate" if args.mdpg_dynamics_model == "box_approx" else None),
+                            "pneumatic_io": None,
                             "collision": None, "tcp_site": tcp_site, "tcp_calibrated": False,
                             "mount_xyz_m": list(args.mdpg_mount_xyz),
                             "mount_rpy_rad": list(args.mdpg_mount_rpy),
@@ -184,7 +200,10 @@ def main(argv: list[str] | None = None) -> int:
                 folder = execute(config, args.results_dir, args.gripper_type, payload_mass,
                                  args.sim_domain_id, args.connect_existing, args.connection_timeout,
                                  reference_explicit=args.reference_tcp_mm is not None,
-                                 record_video=args.record_video)
+                                 record_video=args.record_video,
+                                 mdpg_mount_xyz=args.mdpg_mount_xyz,
+                                 mdpg_mount_rpy=args.mdpg_mount_rpy,
+                                 mdpg_dynamics_model=args.mdpg_dynamics_model)
             else:
                 from .real_executor import execute
                 folder, blocked = execute(config, args.results_dir, args.gripper_type, payload_mass,

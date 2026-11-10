@@ -5,6 +5,7 @@
   <!-- TODO: measure the mDPG mount transform from link_6. No numeric default is valid. -->
   <xacro:arg name="mdpg_mount_xyz" default="TODO_MEASURE"/>
   <xacro:arg name="mdpg_mount_rpy" default="TODO_MEASURE"/>
+  <xacro:arg name="mdpg_dynamics_model" default="visual"/>
   <xacro:include filename="$(find dsr_description2)/xacro/a0509.urdf.xacro"/>
 
   <xacro:if value="${'$(arg gripper_type)' == 'ag145'}">
@@ -16,7 +17,7 @@
   </xacro:if>
   <xacro:if value="${'$(arg gripper_type)' == 'mdpg_1s1'}">
     <xacro:include filename="$(find mdpg_1s1_description)/urdf/mdpg_1s1_macro.xacro"/>
-    <xacro:mdpg_1s1_gripper prefix="mdpg_" parent="link_6">
+    <xacro:mdpg_1s1_gripper prefix="mdpg_" parent="link_6" dynamics_model="$(arg mdpg_dynamics_model)">
       <origin xyz="$(arg mdpg_mount_xyz)" rpy="$(arg mdpg_mount_rpy)"/>
     </xacro:mdpg_1s1_gripper>
   </xacro:if>

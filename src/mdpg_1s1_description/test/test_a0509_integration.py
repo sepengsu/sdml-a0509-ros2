@@ -11,19 +11,21 @@ import pytest
 import xacro
 from ament_index_python.packages import get_package_share_directory
 
-from mdpg_1s1_description.model import build_mdpg_scene
+from mdpg_1s1_description.model import (BOX_INERTIA_KG_M2, SPEC_MASS_KG,
+                                         build_mdpg_scene)
 
 
 TOOL_XACRO = Path(get_package_share_directory("sdml_a0509_description")) / "urdf/a0509_with_gripper.urdf.xacro"
 ARM_SCENE = Path(get_package_share_directory("dsr_description2")) / "mujoco_models/a0509/scene.xml"
 
 
-def expand(gripper_type):
+def expand(gripper_type, dynamics_model="visual"):
     doc = xacro.process_file(str(TOOL_XACRO), mappings={
         "gripper_type": gripper_type,
         # Identity is an unmeasured display fixture, not an adapter pose.
         "mdpg_mount_xyz": "0 0 0",
         "mdpg_mount_rpy": "0 0 0",
+        "mdpg_dynamics_model": dynamics_model,
     })
     return ET.fromstring(doc.toxml())
 
@@ -107,3 +109,35 @@ def test_mdpg_mujoco_visual_only_and_mount_required():
         np.testing.assert_allclose(local_tcp, [0, 0, 0.09], atol=1e-6)
         local_tcp_rotation = data.xmat[flange].reshape(3, 3).T @ data.site_xmat[tcp].reshape(3, 3)
         np.testing.assert_allclose(local_tcp_rotation, np.diag([1, -1, -1]), atol=1e-6)
+
+
+def test_mdpg_box_inertia_requires_opt_in_and_matches_urdf():
+    root = expand("mdpg_1s1", "box_approx")
+    inertial = root.find(".//link[@name='mdpg_base_link']/inertial")
+    assert inertial is not None
+    assert float(inertial.find("mass").attrib["value"]) == SPEC_MASS_KG
+    inertia = inertial.find("inertia").attrib
+    for field, expected in zip(("ixx", "iyy", "izz"), BOX_INERTIA_KG_M2):
+        assert float(inertia[field]) == pytest.approx(expected)
+    with tempfile.TemporaryDirectory() as folder:
+        output = Path(folder) / "box_scene.xml"
+        with pytest.raises(ValueError, match="dynamics_model"):
+            build_mdpg_scene(output, (0, 0, 0), (0, 0, 0), dynamics_model="unknown")
+        build_mdpg_scene(output, (0, 0, 0), (0, 0, 0), dynamics_model="box_approx")
+        model = mujoco.MjModel.from_xml_path(str(output))
+        bare = mujoco.MjModel.from_xml_path(str(ARM_SCENE))
+        assert (model.nq, model.nv) == (bare.nq, bare.nv) == (6, 6)
+        assert sum(model.body_mass) - sum(bare.body_mass) == pytest.approx(SPEC_MASS_KG)
+        tool = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "mdpg_base_link")
+        assert model.body_mass[tool] == pytest.approx(SPEC_MASS_KG)
+        np.testing.assert_allclose(model.body_inertia[tool], BOX_INERTIA_KG_M2)
+        q = [-0.5, -0.5, 1.6, 0, -0.6, 0]
+        def inverse_torque(m):
+            data = mujoco.MjData(m)
+            data.qpos[:] = q
+            mujoco.mj_forward(m, data)
+            # Gravity is disabled in the upstream scene; excite the mass matrix.
+            data.qacc[:] = [.1, .2, .3, .4, .5, .6]
+            mujoco.mj_inverse(m, data)
+            return data.qfrc_inverse.copy()
+        assert np.linalg.norm(inverse_torque(model) - inverse_torque(bare)) > .01

@@ -17,6 +17,7 @@ def generate_launch_description():
     gripper_type = LaunchConfiguration("gripper_type")
     mdpg_mount_xyz = LaunchConfiguration("mdpg_mount_xyz")
     mdpg_mount_rpy = LaunchConfiguration("mdpg_mount_rpy")
+    mdpg_dynamics_model = LaunchConfiguration("mdpg_dynamics_model")
 
     declare_model = DeclareLaunchArgument("model", default_value="a0509", description="ROBOT_MODEL")
     declare_color = DeclareLaunchArgument("color", default_value="white", description="ROBOT_COLOR")
@@ -46,6 +47,7 @@ def generate_launch_description():
             "gripper_type": gripper_type,
             "mdpg_mount_xyz": mdpg_mount_xyz,
             "mdpg_mount_rpy": mdpg_mount_rpy,
+            "mdpg_dynamics_model": mdpg_dynamics_model,
         }.items(),
     )
 
@@ -62,6 +64,7 @@ def generate_launch_description():
             " gripper_type:=", gripper_type,
             " mdpg_mount_xyz:='", mdpg_mount_xyz, "'",
             " mdpg_mount_rpy:='", mdpg_mount_rpy, "'",
+            " mdpg_dynamics_model:=", mdpg_dynamics_model,
         ]
     )
     robot_description = {"robot_description": robot_description_content}
@@ -89,6 +92,7 @@ def generate_launch_description():
             DeclareLaunchArgument("gripper_type", default_value="none", description="none | ag145 | mdpg_1s1"),
             DeclareLaunchArgument("mdpg_mount_xyz", default_value="TODO_MEASURE"),
             DeclareLaunchArgument("mdpg_mount_rpy", default_value="TODO_MEASURE"),
+            DeclareLaunchArgument("mdpg_dynamics_model", default_value="visual", description="visual | box_approx"),
             declare_color,
             declare_use_sim_time,
             declare_start_rviz,

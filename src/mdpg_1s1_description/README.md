@@ -8,7 +8,7 @@ Created from the uploaded `mDPG_1S1 CS (1).stp` (Autodesk Inventor 2024 STEP/AP2
 - `urdf/mdpg_1s1_standalone.urdf.xacro`: independent RViz preview
 - `launch/view_mdpg_1s1.launch.py`: preview launch
 - `config/mesh_manifest.json`: STEP-derived dimensions and coordinate transform
-- `config/dynamics_values_to_measure.yaml`: unfilled physical quantities
+- `config/dynamics_values_to_measure.yaml`: user-provided mass, opt-in estimate and remaining measurement TODOs
 
 The CAD file has a pump cover, LED indicator, bottom cover, another solid (`솔리드33`), and a two-solid `air_pad`.
 It is not modeled as a two-finger gripper. Vacuum actuation, suction attachment and physical I/O are NOT implemented by the STEP file.
@@ -39,7 +39,7 @@ In the active A0509 robot-description xacro (NOT an unrelated copy), remove/cond
 
 **Mesh QA:** The `pump_cover`, `bottom_cover` and `led_indicator` STL meshes are not watertight after triangulation, so treat them as visual meshes only. The supplied collisions are simple primitives.
 
-**For MuJoCo/dynamics**: add measured mass, center of mass, inertia tensor for each genuinely moving link/assembly (at least the complete gripper+adapter), plus contact and vacuum/IO dynamics. The STEP has no validated masses or material properties. `collision` shapes are approximate and not meant for quantitative contact validation.
+**For MuJoCo/dynamics**: the later user-provided `DC PNEUMATIC GRIPPER_1` image states a 0.62 kg gripper mass, 65 × 70 × 81 mm with suction pad and a 1.5 kg *maximum payload rating*. We apply 0.62 kg only when `box_approx` is selected. The center of mass (0, 0, 40.5 mm) and diagonal inertia (0.000592152, 0.000557277, 0.000471458 kg·m²) assume a uniform solid box. They are **not measured**. The product image has not been independently matched to the STEP assembly; its 81 mm height also differs from the CAD visual suction lip at 90 mm. The 1.5 kg rating is not an attached load. Measure the gripper/adapter mass, center of mass and inertia, and implement contact and vacuum/IO dynamics before quantitative sim-to-real comparison. The STEP has no validated material properties. `collision` shapes are approximate and not meant for quantitative contact validation.
 
 **Repository integration caveat:** In `c0sogi/sdml-doosan-robot` branch `alchemist`, `src/a0509_mujoco_sim/urdf/a0509.urdf.xacro` includes AG145, but the MuJoCo launch actually constructs `robot_description` from `dsr_description2/xacro/a0509.urdf.xacro` and loads `dsr_description2/mujoco_models/a0509/scene.xml`. For real/RViz launch it may use `dsr_moveit_config_a0509/config/a0509.urdf.xacro`. Changing one unused duplicate Xacro is not sufficient. Determine the launch-specific active path before switching tools. Do not mount both grippers simultaneously.
 
@@ -67,4 +67,11 @@ ros2 launch a0509_mujoco_sim mujoco_sim.launch.py gripper_type:=mdpg_1s1 \
 ros2 launch a0509_mujoco_sim mujoco_sim.launch.py gripper_type:=ag145
 ```
 
-The mDPG MuJoCo scene is **visual-only**: its six CAD meshes have no inertial or contact contribution and the arm retains six DoF. `run_experiment --preview --gripper-type mdpg_1s1` is supported with the explicit mount values. mDPG trajectory dynamics recording and real motion are blocked until the TODO fields in `config/dynamics_values_to_measure.yaml` are measured and validated. `a0509_real.launch.py gripper_type:=mdpg_1s1` uses the RT arm/state launch and omits AG145 control and pick-and-place nodes; it does not implement suction I/O.
+The default mDPG MuJoCo scene is **visual-only**. Its six CAD meshes have no contact contribution and the arm retains six DoF. `mdpg_dynamics_model:=box_approx` changes the attached fixed body to the named mass/inertia estimate above. `run_experiment --simulation` requires this explicit option for mDPG and records synthetic dynamics with the same result schema as AG145. Real motion remains blocked. `a0509_real.launch.py gripper_type:=mdpg_1s1` uses the RT arm/state launch and omits AG145 control and pick-and-place nodes; it does not implement suction I/O.
+
+```bash
+# Replace the zero mount fixture with measured values before interpreting dynamics.
+ros2 run a0509_dynamics_experiment run_experiment --simulation --trajectory T1 \
+  --gripper-type mdpg_1s1 --mdpg-dynamics-model box_approx \
+  --mdpg-mount-xyz 0 0 0 --mdpg-mount-rpy 0 0 0
+```

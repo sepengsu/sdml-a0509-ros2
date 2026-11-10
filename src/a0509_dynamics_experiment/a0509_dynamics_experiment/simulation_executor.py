@@ -277,13 +277,18 @@ class SimTimeVelocityFilter:
 
 def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass: float,
             sim_domain_id: int, connect_existing: bool, launch_timeout_s: float = 60.0,
-            reference_explicit: bool = False, record_video: bool = False) -> Path:
+            reference_explicit: bool = False, record_video: bool = False,
+            mdpg_mount_xyz=None, mdpg_mount_rpy=None,
+            mdpg_dynamics_model: str = "visual") -> Path:
     if not 0 <= sim_domain_id <= 232:
         raise ValueError("ROS_DOMAIN_ID must be 0..232")
-    if gripper_type not in ("none", "ag145"):
-        raise ValueError("simulation gripper type must be none or ag145")
-    if gripper_type == "ag145" and connect_existing:
-        raise ValueError("AG145 simulation requires a newly launched model")
+    if gripper_type not in ("none", "ag145", "mdpg_1s1"):
+        raise ValueError("unsupported simulation gripper type")
+    if gripper_type == "mdpg_1s1" and (mdpg_dynamics_model != "box_approx"
+                                       or mdpg_mount_xyz is None or mdpg_mount_rpy is None):
+        raise ValueError("mDPG dynamics requires explicit box_approx and mount pose")
+    if gripper_type in ("ag145", "mdpg_1s1") and connect_existing:
+        raise ValueError("tool simulation requires a newly launched matching model")
     if "rclpy" in __import__("sys").modules and os.environ.get("ROS_DOMAIN_ID") != str(sim_domain_id):
         raise RuntimeError("simulation domain cannot change after rclpy has been imported")
     os.environ["ROS_DOMAIN_ID"] = str(sim_domain_id)
@@ -300,6 +305,27 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                               "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion",
                               "tcp_site": "ag145_tcp", "tcp_offset_mm": list(AG145_TCP_OFFSET_MM),
                               "tcp_calibrated": False}
+    elif gripper_type == "mdpg_1s1":
+        from mdpg_1s1_description.model import (
+            BOX_COM_M, BOX_INERTIA_KG_M2, SPEC_MASS_KG,
+            SPEC_MAX_PAYLOAD_KG, build_mdpg_scene)
+
+        precreated_trial = create_trial(root, "simulation", config.trajectory_id)
+        scene_path = build_mdpg_scene(precreated_trial[0] / "mdpg_scene.xml",
+                                      mdpg_mount_xyz, mdpg_mount_rpy,
+                                      dynamics_model=mdpg_dynamics_model)
+        gripper_model_info = {
+            "dynamics_model": "box_approx", "mass_kg": SPEC_MASS_KG,
+            "mass_source": "user-supplied product specification image",
+            "center_of_mass_m": list(BOX_COM_M),
+            "inertia_diagonal_kg_m2": list(BOX_INERTIA_KG_M2),
+            "inertia_source": "uniform-density 65x70x81 mm box estimate, not measured",
+            "max_payload_rating_kg": SPEC_MAX_PAYLOAD_KG,
+            "mount_xyz_m": list(mdpg_mount_xyz), "mount_rpy_rad": list(mdpg_mount_rpy),
+            "mount_verified": False, "tcp_calibrated": False,
+            "pneumatic_io": None, "suction_contact": None,
+            "label_use": "synthetic approximation only; not real torque ground truth",
+        }
     import rclpy
     from rclpy.node import Node
     from rclpy.parameter import Parameter
@@ -317,6 +343,11 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                            "use_sim_time:=true", f"gripper_type:={gripper_type}"]
             if scene_path is not None:
                 launch_args.append(f"mujoco_model_path:={scene_path}")
+            if gripper_type == "mdpg_1s1":
+                launch_args.extend((
+                    f"mdpg_mount_xyz:={' '.join(str(value) for value in mdpg_mount_xyz)}",
+                    f"mdpg_mount_rpy:={' '.join(str(value) for value in mdpg_mount_rpy)}",
+                    "mdpg_dynamics_model:=box_approx"))
             launch = subprocess.Popen(launch_args, env=os.environ.copy())
         node = Node("a0509_dynamics_simulation", parameter_overrides=[Parameter("use_sim_time", value=True)],
                     automatically_declare_parameters_from_overrides=True)
@@ -361,7 +392,8 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             rclpy.spin_once(node, timeout_sec=0.1)
         if publisher.get_subscription_count() == 0:
             raise RuntimeError("MuJoCo position controller is not subscribed; commands blocked")
-        observer = MujocoObserver(scene_path)
+        observer = MujocoObserver(scene_path, tcp_site=("mdpg_tcp" if gripper_type == "mdpg_1s1"
+                                                        else "ag145_tcp"))
         start_q = latest["q"]
         preflight = None
         if config.trajectory_id in DYNAMICS10_IDS:
@@ -487,7 +519,10 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             "gripper_type": gripper_type, "payload_mass_kg": payload_mass,
             "rosbag": str(bag_path), "rosbag_relative_path": "rosbag",
             "sim_model": ("ag145_scene.xml (generated from dsr_description2 A0509 and dh_ag145_description)"
-                          if gripper_type == "ag145" else "dsr_description2/mujoco_models/a0509/scene.xml"),
+                          if gripper_type == "ag145" else
+                          "mdpg_scene.xml (0.62 kg uniform-box approximation)"
+                          if gripper_type == "mdpg_1s1" else
+                          "dsr_description2/mujoco_models/a0509/scene.xml"),
             "gripper_model": gripper_model_info,
             "physics_source": "Separate MuJoCo model reconstructed from measured q/dq/ddq; qfrc_actuator unavailable from upstream bridge",
             "acceleration_method": "least-squares slope of up to five unique JointState velocities in ROS simulation time; blank until three samples or when velocity unavailable",

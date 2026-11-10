@@ -14,6 +14,9 @@ def _validate_tool(context):
     selected = LaunchConfiguration("gripper_type").perform(context)
     if selected not in ("none", "ag145", "mdpg_1s1"):
         raise RuntimeError(f"Unsupported gripper_type: {selected}")
+    dynamics_model = LaunchConfiguration("mdpg_dynamics_model").perform(context)
+    if dynamics_model not in ("visual", "box_approx") or (selected != "mdpg_1s1" and dynamics_model != "visual"):
+        raise RuntimeError("mdpg_dynamics_model must be visual or box_approx with gripper_type:=mdpg_1s1")
     if selected == "mdpg_1s1":
         for key in ("mdpg_mount_xyz", "mdpg_mount_rpy"):
             try:
@@ -32,6 +35,7 @@ def generate_launch_description():
     gripper_type = LaunchConfiguration("gripper_type")
     mdpg_mount_xyz = LaunchConfiguration("mdpg_mount_xyz")
     mdpg_mount_rpy = LaunchConfiguration("mdpg_mount_rpy")
+    mdpg_dynamics_model = LaunchConfiguration("mdpg_dynamics_model")
 
     declare_robot_model = DeclareLaunchArgument(
         "robot_model",
@@ -65,6 +69,7 @@ def generate_launch_description():
             " gripper_type:=", gripper_type,
             " mdpg_mount_xyz:='", mdpg_mount_xyz, "'",
             " mdpg_mount_rpy:='", mdpg_mount_rpy, "'",
+            " mdpg_dynamics_model:=", mdpg_dynamics_model,
         ]
     )
     robot_description = {"robot_description": robot_description_content}
@@ -106,6 +111,7 @@ def generate_launch_description():
             DeclareLaunchArgument("gripper_type", default_value="none", description="none | ag145 | mdpg_1s1"),
             DeclareLaunchArgument("mdpg_mount_xyz", default_value="TODO_MEASURE", description="Measured link_6 mount xyz (m)"),
             DeclareLaunchArgument("mdpg_mount_rpy", default_value="TODO_MEASURE", description="Measured link_6 mount rpy (rad)"),
+            DeclareLaunchArgument("mdpg_dynamics_model", default_value="visual", description="visual | box_approx"),
             declare_rviz_config,
             declare_use_gui,
             OpaqueFunction(function=_validate_tool),

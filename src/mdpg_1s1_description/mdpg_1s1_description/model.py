@@ -1,4 +1,4 @@
-"""Attach the CAD-derived mDPG visuals to A0509 without inventing dynamics."""
+"""Attach mDPG CAD visuals and optional, explicitly approximate inertia to A0509."""
 
 from __future__ import annotations
 
@@ -17,6 +17,15 @@ PARTS = {
 }
 CAD_NOMINAL_TCP_Z_M = -0.09  # Raw CAD axis; the installed tool frame flips X by 180 deg.
 CAD_TO_MOUNT_QUAT = "0 1 0 0"  # Red Z=0 face at flange; suction -Z becomes mount +Z.
+SPEC_MASS_KG = 0.62  # User-provided DC PNEUMATIC GRIPPER_1 product image.
+SPEC_WITH_PAD_EXTENTS_M = (0.065, 0.070, 0.081)
+SPEC_MAX_PAYLOAD_KG = 1.5  # Rating only; never added as attached payload mass.
+BOX_COM_M = (0.0, 0.0, SPEC_WITH_PAD_EXTENTS_M[2] / 2)
+BOX_INERTIA_KG_M2 = (
+    SPEC_MASS_KG * (SPEC_WITH_PAD_EXTENTS_M[1]**2 + SPEC_WITH_PAD_EXTENTS_M[2]**2) / 12,
+    SPEC_MASS_KG * (SPEC_WITH_PAD_EXTENTS_M[0]**2 + SPEC_WITH_PAD_EXTENTS_M[2]**2) / 12,
+    SPEC_MASS_KG * (SPEC_WITH_PAD_EXTENTS_M[0]**2 + SPEC_WITH_PAD_EXTENTS_M[1]**2) / 12,
+)
 
 
 def _share(package: str, local_parts: tuple[str, ...]) -> Path:
@@ -60,12 +69,16 @@ def _rpy_quat(rpy: tuple[float, float, float]) -> str:
 
 def build_mdpg_scene(output: str | Path, mount_xyz, mount_rpy,
                      arm_scene: str | Path | None = None,
-                     gripper_share: str | Path | None = None) -> Path:
-    """Generate a visual-only MJCF; the tool adds zero mass and no contacts.
+                     gripper_share: str | Path | None = None,
+                     dynamics_model: str = "visual") -> Path:
+    """Generate an MJCF with visual-only or explicit box-approximate inertia.
 
-    The caller must supply the flange transform. Mass, inertia, vacuum and
-    pneumatic IO are intentionally absent until measured values are provided.
+    The caller supplies the flange transform. The optional box inertia assumes
+    uniform density within the product-image dimensions; it is not measured.
+    Vacuum/contact and pneumatic IO remain absent in both modes.
     """
+    if dynamics_model not in ("visual", "box_approx"):
+        raise ValueError("mDPG dynamics_model must be visual or box_approx")
     xyz = _triple(mount_xyz, "mount_xyz")
     rpy = _triple(mount_rpy, "mount_rpy")
     if arm_scene is None:
@@ -99,9 +112,16 @@ def build_mdpg_scene(output: str | Path, mount_xyz, mount_rpy,
     flange = worldbody.find(".//body[@name='link_6']")
     if flange is None:
         raise ValueError("A0509 model has no link_6")
-    # A MJCF frame attaches visuals to link_6 without creating a massless body.
-    tool = ET.SubElement(flange, "frame", name="mdpg_base_link",
+    # The visual path stays massless. The opt-in fixed body adds only the
+    # user-supplied 0.62 kg and an explicitly approximate uniform-box inertia.
+    tool = ET.SubElement(flange, "body" if dynamics_model == "box_approx" else "frame",
+                         name="mdpg_base_link",
                          pos=" ".join(str(value) for value in xyz), quat=_rpy_quat(rpy))
+    if dynamics_model == "box_approx":
+        ET.SubElement(tool, "inertial",
+                      pos=" ".join(f"{value:.12g}" for value in BOX_COM_M),
+                      mass=f"{SPEC_MASS_KG:.12g}",
+                      diaginertia=" ".join(f"{value:.12g}" for value in BOX_INERTIA_KG_M2))
     cad = ET.SubElement(tool, "frame", name="mdpg_cad_frame", quat=CAD_TO_MOUNT_QUAT)
     ET.SubElement(cad, "site", name="mdpg_tcp", pos=f"0 0 {CAD_NOMINAL_TCP_Z_M}",
                   size="0.004", rgba="0.1 0.5 1 1")

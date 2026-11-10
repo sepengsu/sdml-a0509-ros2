@@ -1,8 +1,15 @@
-# Fill with actual gripper+adapter values, relative to mdpg_base_link.
+# Product-image mass is for the gripper only; fill measured gripper+adapter values for real use.
 # DO NOT use missing/placeholder values to train dynamics or compare sim-to-real.
-mass_kg: null
+mass_kg: 0.62            # user-provided DC PNEUMATIC GRIPPER_1 image; adapter excluded
+adapter_mass_kg: null    # TODO: measure adapter
+max_payload_rating_kg: 1.5 # capacity rating; NOT attached payload mass
 center_of_mass_m: null    # [x, y, z]
 inertia_tensor_kg_m2: null # [ixx, iyy, izz, ixy, ixz, iyz]
+simulation_box_approx:
+  opt_in_only: true
+  dimensions_m: [0.065, 0.070, 0.081] # with suction pad, from supplied spec image
+  assumed_com_m: [0, 0, 0.0405]       # uniform-box assumption, not measured
+  assumed_diagonal_inertia_kg_m2: [0.000592151666666667, 0.000557276666666667, 0.000471458333333333]
 mount_to_link_6_xyz_m: null
 mount_to_link_6_rpy_rad: null
 mount_verified: false

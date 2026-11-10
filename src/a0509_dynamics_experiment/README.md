@@ -78,16 +78,24 @@ AG145 Preview는 MuJoCo Python 패키지가 설치된 환경에서 로컬 모델
 
 첨부된 `mdpg_1s1_description`의 STL/Xacro를 A0509 `link_6`에 고정 연결했습니다. 활성 URDF는 `sdml_a0509_description/urdf/a0509_with_gripper.urdf.xacro`이며, `gripper_type:=ag145|mdpg_1s1|none`으로 하나만 선택합니다. MuJoCo 기본 launch도 같은 값을 받아 선택된 시각 모델을 장착합니다.
 
-공압 그리퍼의 장착 위치·회전은 제공된 STEP으로 확인할 수 없으므로 `mdpg_mount_xyz`(m)와 `mdpg_mount_rpy`(rad)를 명시해야 합니다. 누락하면 launch가 거부합니다. `mdpg_tcp`의 장착 프레임 기준 +90 mm는 CAD 외곽 기준 잠정 값이며 보정된 실제 TCP가 아닙니다. MuJoCo에는 메시만 넣고 **질량·관성·접촉·흡착력을 넣지 않았습니다**. `mdpg_1s1_description/config/dynamics_values_to_measure.yaml`에 물리량과 공압 IO의 TODO가 남아 있습니다.
+공압 그리퍼의 장착 위치·회전은 제공된 STEP으로 확인할 수 없으므로 `mdpg_mount_xyz`(m)와 `mdpg_mount_rpy`(rad)를 명시해야 합니다. 누락하면 launch가 거부합니다. `mdpg_tcp`의 장착 프레임 기준 +90 mm는 CAD 외곽 기준 잠정 값이며 보정된 실제 TCP가 아닙니다. 기본 `visual` 모드는 질량 없이 메시만 장착합니다. `--mdpg-dynamics-model box_approx`를 명시하면 사용자가 제공한 제품 이미지의 그리퍼 질량 0.62 kg과 65 × 70 × 81 mm 균일 박스 가정에서 계산한 관성을 MuJoCo/URDF에 추가합니다. 중심질량과 관성은 **실측값이 아닙니다**. 이미지의 1.5 kg은 최대 허용 페이로드이며 현재 장착된 하중이 아닙니다. CAD 빨판 끝단은 약 90 mm로 이미지의 전체 높이 81 mm와 다르며, 두 자료가 동일한 조립체인지 독립 확인하지 못했습니다. 접촉·흡착력·공압 IO·어댑터 질량은 구현되지 않았고 TODO로 남습니다.
 
 ```bash
 # 측정된 link_6 장착 변환으로 치환할 것. 숫자 0을 실제 장착값으로 가정하지 말 것.
 ros2 launch sdml_a0509_bringup rviz_only.launch.py gripper_type:=mdpg_1s1 mdpg_mount_xyz:="<X Y Z>" mdpg_mount_rpy:="<R P Y>"
 ros2 launch a0509_mujoco_sim mujoco_sim.launch.py gripper_type:=mdpg_1s1 mdpg_mount_xyz:="<X Y Z>" mdpg_mount_rpy:="<R P Y>"
 ros2 run a0509_dynamics_experiment run_experiment --preview --trajectory T1 --gripper-type mdpg_1s1 --mdpg-mount-xyz X Y Z --mdpg-mount-rpy R P Y
+
+# 명시적 근사 동역학 T1. 아래 0 0 0은 미측정 시험 장착값이며 실물 설정값이 아닙니다.
+ros2 run a0509_dynamics_experiment run_experiment --simulation --trajectory T1 \
+  --gripper-type mdpg_1s1 --mdpg-dynamics-model box_approx \
+  --mdpg-mount-xyz 0 0 0 --mdpg-mount-rpy 0 0 0 \
+  --results-dir results/mdpg_box_approx
 ```
 
-실로봇의 `a0509_real.launch.py gripper_type:=mdpg_1s1`은 AG145 구동/피킹 노드 없이 RT 상태 발행과 RViz를 사용합니다. 실제 접속은 검증하지 않았습니다. `run_experiment --simulation --gripper-type mdpg_1s1`의 **동역학 기록**과 `--execute`는 물리 파라미터·공압 IO·장착/안전 검증이 없어서 차단합니다.
+실로봇의 `a0509_real.launch.py gripper_type:=mdpg_1s1`은 AG145 구동/피킹 노드 없이 RT 상태 발행과 RViz를 사용합니다. 실제 접속은 검증하지 않았습니다. mDPG 시뮬레이션 동역학 기록은 `box_approx` 선택 시에만 가능하고 결과 메타데이터에 근사 모델을 표시합니다. 이 합성 데이터는 실측 PKAN 정답 토크로 사용하면 안 됩니다. 실로봇 `--execute`는 장착/안전 검증과 공압 IO가 없어 차단합니다.
+
+2026-11-10 Docker MuJoCo T1 시험에서 `results/mdpg_box_approx/simulation/T1/trial_001/`에 궤적·동역학 CSV, PNG/HTML, `mdpg_scene.xml`, ROS Bag과 메타데이터를 저장했습니다. 1001개 동역학 행을 기록했고 `/joint_states` 관찰 주기는 시뮬레이션 시간 기준 약 99.99 Hz, 추정 누락률은 0%였습니다. 전체 모델 질량은 기본 팔 대비 0.62 kg 증가했습니다. 이 시험의 `0 0 0` 장착값은 **미측정 테스트 픽스처**이며 실물 장착이나 토크 정확도 검증 결과가 아닙니다.
 
 장착 위치가 미측정인 상태에서 **영상만** 필요하면, T1을 그리퍼 없이 MuJoCo에서 실행한 관절 기록에 mDPG 시각 메시를 덧씌워 재생할 수 있습니다. A0509 `A0509_6_0.stl`은 `link_6` 로컬 Z=-66~0 mm이고 끝 장착면이 Z=0입니다. mDPG CAD는 빨간 덮개의 반대편 장착면이 Z=0, 빨판이 -90 mm이므로, **CAD 메시 자체를 X축으로 180° 회전**해 빨간 면을 J6 끝에 두고 빨판을 바깥쪽(+Z)으로 향하게 했습니다. 다음의 `0 0 0`은 실물 장착값이 아닌 **시각화 테스트 기준**이며 실제 어댑터, TCP, 질량, 흡착 동역학을 검증하지 않습니다. 재생 영상은 별도 `mode=visual_replay` 메타데이터와 함께 저장되며 새 그리퍼 동역학 데이터로 사용하면 안 됩니다.
 
@@ -110,7 +118,7 @@ ros2 run a0509_dynamics_experiment render_mdpg_replay \
 
 T5~T14는 AG145 고정 개방 자세의 MuJoCo 시뮬레이션 데이터 확장을 위한 관절 궤적입니다. T5는 J2/J3 교대, T6은 J1/J4 결합, T7은 J5/J6 손목, T8은 J1/J3/J5, T9는 J2/J4/J6, T10은 6축 동시 multi-sine입니다. T11은 J2/J3/J5 chirp, T12는 다른 관절 J1/J4/J6 chirp입니다. T13과 T14는 각각 다른 시작 자세에서 다관절 또는 순차·동시 운동을 결합합니다. 각 축의 진폭·주파수·위상·운동 구간은 `trajectory_generator.EXCITATIONS`와 개별 `metadata.json`에 기록합니다. 시작/종료에는 C2 quintic envelope를 쓰고 위치·속도·가속도를 같은 해석식에서 계산합니다.
 
-분할은 궤적과 trial 단위입니다: **TRAIN T5~T11**, **VALIDATION T12**, **TEST T13~T14**. 기존 T4는 진단용이며 최종 독립 시험으로 간주하지 않습니다. T1~T3의 기존 학습 데이터와 신규 데이터는 자동 병합하거나 PKAN을 재학습하지 않습니다. 새 데이터는 AG145의 기존 1.3 kg·근사 관성·임시 TCP를 유지합니다. mDPG-1S1은 물성 미확인으로 시뮬레이션 동역학 수집 대상에서 제외합니다.
+분할은 궤적과 trial 단위입니다: **TRAIN T5~T11**, **VALIDATION T12**, **TEST T13~T14**. 기존 T4는 진단용이며 최종 독립 시험으로 간주하지 않습니다. T1~T3의 기존 학습 데이터와 신규 데이터는 자동 병합하거나 PKAN을 재학습하지 않습니다. 새 데이터는 AG145의 기존 1.3 kg·근사 관성·임시 TCP를 유지합니다. mDPG-1S1 데이터는 명시적 `box_approx` 선택 시에만 별도 실험 폴더로 수집하며, AG145 PKAN 데이터셋에 자동 병합하지 않습니다.
 
 ```bash
 # 저장소 루트, ROS 2 Humble과 install/setup.bash를 source한 후

@@ -4,8 +4,18 @@
   <!-- Raw CAD has its red mounting face at Z=0 and suction lip at Z=-0.090 m. -->
   <!-- Rotate CAD 180 deg about X inside the tool so red face meets link_6 and suction points outward (+Z). -->
   <!-- Parent mount origin remains TODO for the real adapter; this rotation does not supply it. -->
-  <xacro:macro name="mdpg_1s1_gripper" params="prefix parent *origin tcp_z:=0.090">
+  <xacro:macro name="mdpg_1s1_gripper" params="prefix parent *origin tcp_z:=0.090 dynamics_model:=visual">
     <link name="${prefix}base_link">
+      <!-- Opt-in uniform-box estimate from the supplied 0.62 kg, 65x70x81 mm specification. -->
+      <!-- CoM/inertia are NOT measured; do not use for real payload configuration. -->
+      <xacro:if value="${dynamics_model == 'box_approx'}">
+        <inertial>
+          <origin xyz="0 0 0.0405" rpy="0 0 0"/>
+          <mass value="0.62"/>
+          <inertia ixx="0.000592151666666667" ixy="0" ixz="0"
+                   iyy="0.000557276666666667" iyz="0" izz="0.000471458333333333"/>
+        </inertial>
+      </xacro:if>
       <visual name="pump_cover_visual">
         <origin xyz="0 0 0" rpy="3.141592653589793 0 0"/>
         <geometry><mesh filename="package://mdpg_1s1_description/meshes/pump_cover.stl" scale="0.001 0.001 0.001"/></geometry>
@@ -45,7 +55,7 @@
         <origin xyz="0 0 0.0785" rpy="3.141592653589793 0 0"/>
         <geometry><cylinder radius="0.015" length="0.023"/></geometry>
       </collision>
-      <!-- Deliberately no guessed <inertial>; supply measured/CAD-material mass, CoM, inertia before dynamics use. -->
+      <!-- visual mode has no inertial; box_approx is a named research estimate. -->
     </link>
     <joint name="${prefix}mount_joint" type="fixed">
       <parent link="${parent}"/>
