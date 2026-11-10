@@ -23,6 +23,7 @@ from .payload_model import attach_payload, load_payload_spec
 from .simulation_executor import MujocoObserver
 from .trajectory_generator import (BASE_HOME, EXCITATIONS, JOINT_NAMES, TrajectoryConfig,
                                    generate, is_joint_trajectory)
+from .t16_fourier import spec_path as t16_fourier_spec_path
 from .trajectory_visualizer import save_dynamics_plot, save_trajectory_plot
 
 CONDITIONS = (
@@ -486,8 +487,12 @@ def main(argv=None):
     scenes = build_condition_scenes(root / "models" / "conditions", args.mount_xyz,
                                     args.mount_rpy, args.payload_spec)
     fingerprint_hash = hashlib.sha256()
-    for path in (Path(__file__), Path(__file__).with_name("trajectory_generator.py"),
-                 args.payload_spec, *scenes.values()):
+    fingerprint_paths = [Path(__file__), Path(__file__).with_name("trajectory_generator.py"),
+                         args.payload_spec, *scenes.values()]
+    if args.campaign == "trajectory16":
+        fingerprint_paths.extend((Path(__file__).with_name("t16_fourier.py"),
+                                  t16_fourier_spec_path()))
+    for path in fingerprint_paths:
         fingerprint_hash.update(path.read_bytes())
     fingerprint = fingerprint_hash.hexdigest()
     if args.pilot:
