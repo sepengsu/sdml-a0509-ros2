@@ -1,0 +1,11 @@
+{
+  "dataset": "model/residual_data/dynamics10_v1",
+  "output": "model/residual_runs/dynamics10_v1",
+  "max_epochs": 100,
+  "patience": 15,
+  "batch_size": 128,
+  "learning_rate": 0.002,
+  "residual_lambda": 0.001,
+  "seed": 42,
+  "train_mlp": true
+}

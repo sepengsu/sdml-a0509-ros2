@@ -177,3 +177,47 @@ AG145만 보면 새 trial은 0.5228→0.0385 Nm로 개선됐지만, T4는 0.0737
 [dataset.csv](residual_data/rbd_v1/dataset.csv)와 `dataset.npz`에 입력·라벨·분할을, [predictions.csv](residual_runs/rbd_v1/predictions.csv)에 기준/명목/잔차/보정 토크를 저장했습니다. [training.json](residual_runs/rbd_v1/training.json)과 체크포인트 `best_pkan.pt`, `best_mlp.pt`가 학습 이력을 보존합니다. `figures/`에는 `torque_comparison.png`, `joint_rmse.png`, `residual_torque.png`, `generalization.png`, `loss_curve.png`가 있습니다. 단위는 rad, rad/s, rad/s², Nm, Tool 질량 kg, COM m, 관성 kg·m²입니다.
 
 이 결과는 같은 MuJoCo 엔진 안에서 파라미터 불일치를 합성한 평가입니다. 실제 A0509 RT 토크와 비교하지 않았고 Sim-to-Real Gap 보정을 검증하지 않았습니다. 다음 단계에서는 독립적인 시뮬레이션 rollout과 실측 Tool 관성을 확보하고, T4 및 새 작업 공간을 포함해 재학습/재평가해야 합니다. 그 후에도 실로봇에는 별도 안전 검증이 필요합니다. Tool 순차 변경에 대한 Replay/EWC 비교는 후속 연구 범위입니다.
+
+## T5~T14 궤적별 분석 및 PKAN 재학습 (`dynamics10_v1`)
+
+앞 절의 `rbd_v1` 파일을 덮어쓰지 않고, 실제로 실행해 기록한 AG145 MuJoCo T5~T14의 최신 품질 통과 trial을 분석했습니다. 원본 100 Hz에 가까운 15,710행의 관절 위치·속도·가속도·역동역학 토크·목표 추종 오차를 궤적별로 계산했습니다. 모든 trial의 관측 주기는 약 99.98 Hz이며 기록된 누락률과 관절 제한 위반은 0입니다. 원본 파일 경로와 SHA-256은 [데이터 manifest](residual_data/dynamics10_v1/manifest.json)에 있습니다.
+
+T5~T11을 학습(2,167행), T12를 검증 및 조기 종료(321행), T13·T14를 모델 선택에 쓰지 않는 시험(662행)으로 분리했습니다. 학습용 파일은 원본을 5행 간격으로 추출한 20 Hz 부분집합입니다. 이전 T4(1,480행)는 이전 연구에서 이미 관찰된 자료이므로 독립 시험이 아닌 참고 진단으로만 넣었습니다. 모든 새 자료는 **AG145 한 종류와 궤적당 한 trial**이며 10개 Tool 입력값은 이 자료 안에서 일정합니다. 다른 그리퍼나 payload 변화에 대한 학습·검증으로 해석할 수 없습니다.
+
+| 궤적 | 조건 | 원본 행 | 최대 역동역학 토크 [Nm] | 목표 각도 최대 오차 [rad] | 명목 RBD → 새 PKAN RMSE [Nm] |
+|---|---|---:|---:|---:|---:|
+| T5 | J2/J3 교대 사인, 학습 | 1,401 | 110.96 | 0.0460 | 0.5258 → 0.0025 |
+| T6 | J1/J4 동시 사인, 학습 | 1,401 | 83.05 | 0.0369 | 0.5235 → 0.0012 |
+| T7 | J5/J6 가진, 학습 | 1,401 | 95.62 | 0.0429 | 0.5241 → 0.0013 |
+| T8 | J1/J3/J5 다중 사인, 학습 | 1,601 | 97.84 | 0.0401 | 0.5236 → 0.0013 |
+| T9 | J2/J4/J6 다중 사인, 학습 | 1,601 | 79.60 | 0.0354 | 0.5251 → 0.0010 |
+| T10 | 6축 다중 사인, 학습 | 1,801 | 81.74 | 0.0336 | 0.5261 → 0.0012 |
+| T11 | J2/J3/J5 주파수 sweep, 학습 | 1,601 | 106.69 | 0.0440 | 0.5315 → 0.0014 |
+| T12 | J1/J4/J6 chirp, 검증 | 1,601 | 84.73 | 0.0370 | 0.5234 → 0.0025 |
+| T13 | 이동된 자세의 다중 사인, 시험 | 1,601 | 73.34 | 0.0316 | 0.2784 → **0.2089** |
+| T14 | 이동된 자세의 복합 가진, 시험 | 1,701 | 87.96 | 0.0384 | 0.6158 → 0.0350 |
+
+위 토크는 저장된 `qfrc_inverse`를 같은 MuJoCo 모델의 질량행렬·bias·감쇠로 재구성한 값이며 구동기 또는 독립 토크 센서의 측정값이 아닙니다. `qfrc_actuator`도 이번 기록에서는 비어 있습니다. 오차는 추출한 행의 6축 전체를 합친 RMSE입니다. 궤적별 관절 범위, 속도·가속도·토크 통계, 목표 추종과 그래프는 [분석 결과](residual_runs/dynamics10_v1/analysis/analysis.json), [관절별 CSV](residual_runs/dynamics10_v1/analysis/per_joint_summary.csv), `analysis/figures/`에 있습니다.
+
+새 PKAN은 기존 `ResidualPKAN` 구조와 AdamW 기본 설정을 재사용해 T12 검증 손실 기준 27 epoch의 체크포인트를 저장했습니다. 명목 RBD는 AG145 질량 0.8배, 주관성 0.75배, 로컬 COM 변위 (+0.005, -0.005, -0.01) m의 **합성 파라미터 오차**를 가집니다. 실제 Tool 파라미터로 계산한 `tool_aware_rbd`는 동일한 MuJoCo 식을 재구성하므로 거의 0 오차인 산술 확인용 비교군입니다.
+
+| 분할 | 명목 RBD | 이전 PKAN | 새 PKAN | 새 MLP |
+|---|---:|---:|---:|---:|
+| 학습 T5~T11 | 0.5257 | 0.0449 | 0.0014 | 0.0005 |
+| 검증 T12 | 0.5234 | 0.0197 | 0.0025 | 0.0008 |
+| 시험 T13·T14 | 0.4826 | 0.2334 | **0.1476** | 0.0698 |
+| 참고 진단 T4 | 0.0737 | 0.4755 | **0.5801** | 2.5459 |
+
+단위는 모두 6축 합산 RMSE [Nm]입니다. 시험에서 새 PKAN은 명목 RBD 대비 69.4% 오차 감소지만 T13의 J2/J3 RMSE는 각각 0.3875/0.3025 Nm입니다. T13·T14의 관절 위치 표본은 모두 학습 분할의 축별 위치 범위 밖입니다. T13의 J3는 학습의 1.528~1.686 rad보다 낮은 1.289~1.421 rad라 외삽 문제가 두드러집니다. 새 MLP가 시험에서 더 낮은 오차를 냈으므로 PKAN이 우월하다고 결론 낼 수 없습니다. T4는 가속도 추정 방식과 작업 공간이 달라 새 PKAN이 크게 과보정합니다. 이 체크포인트의 실로봇 사용, 새로운 Tool 일반화, 독립 토크 측정 정확도는 **검증되지 않았습니다**. 수치는 [평가 결과](residual_runs/dynamics10_v1/metrics.json)와 [예측 CSV](residual_runs/dynamics10_v1/predictions.csv)에 있습니다.
+
+저장소 루트에서 재현합니다. 기존 결과를 보존하려면 출력 경로를 그대로 사용하거나 새 경로를 지정합니다.
+
+```powershell
+model/.venv/Scripts/python.exe -m model.analyze_dynamics10
+model/.venv/Scripts/python.exe -m model.dynamics10_data
+model/.venv/Scripts/python.exe -m model.train_residual --dataset model/residual_data/dynamics10_v1 --output model/residual_runs/dynamics10_v1
+model/.venv/Scripts/python.exe -m model.evaluate_dynamics10
+model/.venv/Scripts/python.exe -m unittest discover -s model/tests -v
+```
+
+Linux에서는 활성화된 동일 의존성 환경에서 `python3 -m ...`으로 각 명령을 실행합니다. 새 학습을 다시 실행하면 같은 출력 경로의 체크포인트가 갱신됩니다. 저장된 `dataset.npz`, `best_pkan.pt`, `best_mlp.pt`, 학습 이력과 그림을 통해 이번 실행 결과를 그대로 확인할 수 있습니다.
