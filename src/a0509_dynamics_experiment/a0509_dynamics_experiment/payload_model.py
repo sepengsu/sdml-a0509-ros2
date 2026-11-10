@@ -66,13 +66,26 @@ def load_payload_spec(path: str | Path, gripper_type: str, mass_kg: float) -> di
     mount_xyz = _triple(entry.get("mount_xyz_m"), f"{key}.mount_xyz_m")
     mount_rpy = _triple(entry.get("mount_rpy_rad"), f"{key}.mount_rpy_rad")
     com_xyz = _triple(entry.get("com_xyz_m"), f"{key}.com_xyz_m")
-    inertia = entry.get("inertia_kg_m2")
-    if not isinstance(inertia, list) or len(inertia) != 6:
-        raise ValueError(f"{key}.inertia_kg_m2 is TODO: provide [ixx,iyy,izz,ixy,ixz,iyz]")
-    try:
-        ixx, iyy, izz, ixy, ixz, iyz = (float(value) for value in inertia)
-    except (TypeError, ValueError) as error:
-        raise ValueError(f"{key}.inertia_kg_m2 requires six finite numbers") from error
+    box_size = None
+    if entry.get("inertia_model") == "uniform_box":
+        if entry.get("inertia_kg_m2") is not None:
+            raise ValueError(f"{key}: uniform_box inertia is derived from box_size_xyz_m")
+        box_size = _triple(entry.get("box_size_xyz_m"), f"{key}.box_size_xyz_m")
+        if any(size <= 0 for size in box_size):
+            raise ValueError(f"{key}.box_size_xyz_m must be positive")
+        x, y, z = box_size
+        ixx = mass_kg * (y * y + z * z) / 12
+        iyy = mass_kg * (x * x + z * z) / 12
+        izz = mass_kg * (x * x + y * y) / 12
+        ixy = ixz = iyz = 0.0
+    else:
+        inertia = entry.get("inertia_kg_m2")
+        if not isinstance(inertia, list) or len(inertia) != 6:
+            raise ValueError(f"{key}.inertia_kg_m2 is TODO: provide [ixx,iyy,izz,ixy,ixz,iyz]")
+        try:
+            ixx, iyy, izz, ixy, ixz, iyz = (float(value) for value in inertia)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"{key}.inertia_kg_m2 requires six finite numbers") from error
     values = (ixx, iyy, izz, ixy, ixz, iyz)
     if not all(math.isfinite(value) for value in values):
         raise ValueError(f"{key}.inertia_kg_m2 requires six finite numbers")
@@ -85,6 +98,8 @@ def load_payload_spec(path: str | Path, gripper_type: str, mass_kg: float) -> di
         "source_note": source_note.strip(),
         "mount_xyz_m": mount_xyz, "mount_rpy_rad": mount_rpy,
         "com_xyz_m": com_xyz, "inertia_kg_m2": values,
+        "inertia_model": entry.get("inertia_model") or "supplied_tensor",
+        "box_size_xyz_m": box_size,
         "parent_body": PARENT_BODIES[gripper_type],
         "spec_path": str(path), "spec_sha256": hashlib.sha256(raw).hexdigest(),
     }
@@ -106,6 +121,12 @@ def attach_payload(scene_path: str | Path, spec: dict) -> Path:
                   pos=" ".join(str(x) for x in spec["com_xyz_m"]),
                   mass=str(spec["mass_kg"]),
                   fullinertia=" ".join(str(x) for x in spec["inertia_kg_m2"]))
+    if spec.get("box_size_xyz_m") is not None:
+        ET.SubElement(body, "geom", name="experiment_payload_visual", type="box",
+                      pos=" ".join(str(x) for x in spec["com_xyz_m"]),
+                      size=" ".join(str(x / 2) for x in spec["box_size_xyz_m"]),
+                      density="0", contype="0", conaffinity="0", group="2",
+                      rgba="0.95 0.7 0.12 0.7")
     ET.indent(tree)
     tree.write(scene_path, encoding="utf-8", xml_declaration=True)
     return scene_path

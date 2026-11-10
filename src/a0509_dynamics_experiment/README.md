@@ -118,19 +118,21 @@ ros2 run a0509_dynamics_experiment render_mdpg_replay \
 
 `scripts/play_7_condition_dataset.ps1`은 bare A0509 무부하 1조건, AG145 0/0.5/1.0 kg 3조건, mDPG 0/0.5/1.0 kg 3조건을 T1~T14에서 각각 3회 실행하도록 294개 trial을 계획합니다. 기본 실행은 **계획 CSV만 생성**합니다. `-Play`를 명시해야 격리된 Docker MuJoCo에서 순차 수집을 시작합니다. 기존 결과를 덮어쓰지 않고 `results/recollection_7conditions/`에 조건·반복별로 저장하며, 성공한 trial은 재실행 시 건너뜁니다. 실로봇 명령은 사용하지 않습니다.
 
-0.5/1.0 kg 조건의 물리 모델은 `config/payload_conditions.json`에 있는 네 항목을 채워야 합니다. 각 항목의 `mount_xyz_m`/`mount_rpy_rad`는 해당 그리퍼 MuJoCo 본체(`ag145_base_link` 또는 `mdpg_base_link`)에서 페이로드 프레임까지의 변환입니다. `com_xyz_m`은 그 페이로드 프레임에서 중심질량까지, `inertia_kg_m2`는 **중심질량에서 페이로드 프레임 축으로 표현한** `[ixx, iyy, izz, ixy, ixz, iyz]`입니다. 단위는 m, rad, kg·m²입니다. `parameter_source`는 `measured` 또는 `declared_simulation_assumption` 중 하나로 명시하고 `source_note`에 측정/근사 방법을 적습니다. 값이 비어 있거나 관성텐서가 물리적으로 유효하지 않으면 첫 trial 전에 실행을 차단합니다.
+0.5/1.0 kg 조건은 사용자가 허용한 **시뮬레이션 전용 균일 직사각형 박스 근사**로 설정했습니다. 두 질량 모두 박스 크기 60 × 40 × 40 mm를 쓰고, 중심질량은 박스 중심, 관성은 `Ixx=m(y²+z²)/12`, `Iyy=m(x²+z²)/12`, `Izz=m(x²+y²)/12`로 계산합니다. AG145 박스 중심은 모델 손가락 충돌체 사이의 `z=175 mm`로 가정합니다. 모델 손가락 사이 간격 106 mm보다 박스 폭 60 mm가 작고, 1.0 kg은 [AG-105-145 제조사 권장 작업물 질량 2 kg](https://en.dh-robotics.com/wp-content/uploads/2023/05/Servo-Electric-Gripper_DH-Robotics_EN2303.pdf)보다 작습니다. mDPG 박스는 명목 흡착 TCP `z=90 mm` 앞에 놓아 중심을 `z=110 mm`로 가정했습니다. 1.0 kg은 사용자 제공 사양 이미지의 최대 페이로드 1.5 kg보다 작습니다. 이 치수·부착 위치·COM은 **실측값이 아니며 실제 파지/흡착 또는 동적 안전성을 보증하지 않습니다.**
 
-MuJoCo에서는 페이로드를 그리퍼에 고정된 관성체로 추가하므로 질량·관성이 토크 계산에 영향을 줍니다. 페이로드 외형, 충돌, 실제 파지력·진공 유지·이탈은 모델링하지 않았습니다. 따라서 이 수집은 **이상적인 고정 부착 시뮬레이션 데이터**이며 실제 작업물을 집어 올리는 실험이나 안전한 실로봇 경로 검증으로 해석할 수 없습니다. mDPG 자체의 0.62 kg 박스 관성과 장착/TCP 역시 아직 검증되지 않았습니다.
+이 가정은 `config/payload_conditions.json`의 네 항목과 각 trial metadata에 기록됩니다. `mount_xyz_m`/`mount_rpy_rad`는 해당 그리퍼 MuJoCo 본체(`ag145_base_link` 또는 `mdpg_base_link`)에서 박스 중심까지의 변환이고, `com_xyz_m`은 그 중심에서 질량중심까지입니다. `inertia_model: uniform_box`와 `box_size_xyz_m`에서 관성텐서를 계산합니다. 직접 측정한 텐서를 사용하려면 `inertia_model`/`box_size_xyz_m`을 제거하고 `inertia_kg_m2`를 `[ixx, iyy, izz, ixy, ixz, iyz]` 순서로 넣습니다. 단위는 m, rad, kg·m²입니다. 설정이 비어 있거나 관성텐서가 물리적으로 유효하지 않으면 첫 trial 전에 차단합니다. **mDPG의 별도 `link_6` 장착 변환은 아직 실측값이 없어 `-Play` 실행 시 입력해야 합니다.**
+
+MuJoCo에서는 박스의 질량·관성이 토크 계산에 반영되고 반투명 박스로 보입니다. 박스의 충돌, 실제 파지력·진공 유지·이탈은 모델링하지 않았습니다. 따라서 이 수집은 **이상적인 고정 부착 시뮬레이션 데이터**이며 실제 작업물을 집어 올리는 실험이나 안전한 실로봇 경로 검증으로 해석할 수 없습니다. mDPG 자체의 0.62 kg 박스 관성과 장착/TCP 역시 아직 검증되지 않았습니다.
 
 ```powershell
 # 저장소 루트에서 계획 294건 생성. 데이터 수집은 시작하지 않음.
 ./scripts/play_7_condition_dataset.ps1
 
-# 네 페이로드 spec의 TODO와 실측 mDPG mount를 채운 후에만 실행.
+# 실측 mDPG mount가 준비된 후에만 실행.
 ./scripts/play_7_condition_dataset.ps1 -Play -MdpgMountXyz @($xM,$yM,$zM) -MdpgMountRpy @($roll,$pitch,$yaw)
 ```
 
-위의 `$xM` 등에는 미리 측정값을 대입해야 합니다. 값이 없으면 실행되지 않습니다.
+위의 `$xM` 등에는 미리 측정값을 대입해야 합니다. 값이 없으면 실행되지 않습니다. 현 시점에는 실측 변환값이 없어 전체 294회 캠페인을 시작할 수 없습니다.
 
 ### Dynamics10: 신규 관절 여기 T5~T14
 

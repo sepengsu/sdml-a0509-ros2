@@ -25,10 +25,18 @@ def _spec(path: Path, gripper: str, mass: float):
     return path
 
 
-def test_template_and_unmodeled_payload_fail_closed(tmp_path):
+def test_declared_box_assumptions_and_unmodeled_payload_fail_closed(tmp_path):
     template = Path(__file__).parents[1] / "config/payload_conditions.json"
-    with pytest.raises(ValueError, match="parameter_source"):
-        load_payload_spec(template, "ag145", .5)
+    assert validate_payloads(["--check-all", str(template)]) == 0
+    for gripper in ("ag145", "mdpg_1s1"):
+        for mass in (.5, 1.0):
+            spec = load_payload_spec(template, gripper, mass)
+            assert spec["parameter_source"] == "declared_simulation_assumption"
+            assert spec["box_size_xyz_m"] == (0.06, 0.04, 0.04)
+            assert spec["inertia_kg_m2"] == pytest.approx((
+                mass * (0.04**2 + 0.04**2) / 12,
+                mass * (0.06**2 + 0.04**2) / 12,
+                mass * (0.06**2 + 0.04**2) / 12, 0, 0, 0))
     with pytest.raises(ValueError, match="only for AG145/mDPG"):
         load_payload_spec(template, "none", .5)
     with pytest.raises(SystemExit) as blocked:
@@ -40,6 +48,11 @@ def test_template_and_unmodeled_payload_fail_closed(tmp_path):
     doc["conditions"]["ag145_p05"]["inertia_kg_m2"] = [-1, 0, 0, 0, 0, 0]
     bad.write_text(json.dumps(doc))
     with pytest.raises(ValueError, match="physically realizable"):
+        load_payload_spec(bad, "ag145", .5)
+    doc = json.loads(template.read_text())
+    doc["conditions"]["ag145_p05"]["box_size_xyz_m"] = [0, 0.04, 0.04]
+    bad.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match="must be positive"):
         load_payload_spec(bad, "ag145", .5)
 
 
@@ -83,12 +96,15 @@ def test_payload_changes_scene_mass_and_inverse_dynamics(tmp_path, gripper, mass
         scene = build_mdpg_scene(tmp_path / "scene.xml", (0, 0, 0), (0, 0, 0),
                                  dynamics_model="box_approx")
     before = mujoco.MjModel.from_xml_path(str(scene))
-    spec = load_payload_spec(_spec(tmp_path / "payload.json", gripper, mass), gripper, mass)
+    spec = load_payload_spec(Path(__file__).parents[1] / "config/payload_conditions.json",
+                             gripper, mass)
     attach_payload(scene, spec)
     after = mujoco.MjModel.from_xml_path(str(scene))
     assert after.nq == before.nq == 6
     assert sum(after.body_mass) - sum(before.body_mass) == pytest.approx(mass)
     assert after.body("experiment_payload").mass == pytest.approx(mass)
+    assert after.geom("experiment_payload_visual").size == pytest.approx(
+        [0.03, 0.02, 0.02])
 
     def torque(model):
         data = mujoco.MjData(model)

@@ -51,7 +51,7 @@ $planPath = Join-Path $resultsRoot 'collection_plan.csv'
 $jobs | Export-Csv -LiteralPath $planPath -NoTypeInformation -Encoding UTF8
 Write-Host "Planned $($jobs.Count) simulation trials: $planPath"
 if (-not $Play) {
-    Write-Host 'Dry run only. Fill payload_conditions.json and provide measured mDPG mount values, then rerun with -Play.'
+    Write-Host 'Dry run only. Payloads use declared uniform-box simulation assumptions. Provide measured mDPG link_6 mount values, then rerun with -Play.'
     return
 }
 
