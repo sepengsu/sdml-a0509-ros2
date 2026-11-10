@@ -1,8 +1,8 @@
 """Build an A0509 MuJoCo scene with the repository's DH AG145 meshes.
 
-The gripper is fixed at its open URDF pose. Its 1.3 kg mass is included as a
-single approximate rigid body; finger actuation and calibrated inertia are not
-claimed by this model.
+The gripper can be frozen open or in a declared grasp pose for an attached
+research payload. Its 1.3 kg mass is included as a single approximate rigid
+body; finger actuation, contact forces and calibrated inertia are not claimed.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 AG145_MASS_KG = 1.3
 AG145_TCP_OFFSET_MM = (0.0, 0.0, 200.0)
 AG145_MOUNT_RPY = (0.0, 0.0, 0.7853981634)
+AG145_BOX_GRASP_ANGLE_RAD = 0.60  # Sim-only pose: finger mesh inner faces at +/-30 mm.
 
 
 def _urdf_quat(rpy: str) -> str:
@@ -119,8 +120,12 @@ def _compatible_stl(path: Path, output_dir: Path, target_faces: int = 8_000) -> 
 
 
 def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
-                      gripper_urdf: str | Path | None = None) -> Path:
+                      gripper_urdf: str | Path | None = None,
+                      grasp_angle_rad: float | None = None) -> Path:
     """Write a self-contained XML that references installed mesh assets."""
+    if grasp_angle_rad is not None and (not math.isfinite(grasp_angle_rad)
+                                        or not 0 < grasp_angle_rad <= 0.93):
+        raise ValueError("AG145 grasp angle must be within the URDF 0..0.93 rad limit")
     output = Path(output)
     if arm_scene is None or gripper_urdf is None:
         found_scene, found_urdf = source_paths()
@@ -180,13 +185,19 @@ def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
     ET.SubElement(mount, "geom", name="ag145_body_collision", type="box",
                   pos="0 0 0.075", size="0.035 0.035 0.075", density="0",
                   rgba="0 0 0 0", contype="1", conaffinity="1")
-    for side, x in (("left", -0.065), ("right", 0.065)):
+    collision_x = 0.065 if grasp_angle_rad is None else 0.045
+    for side, x in (("left", -collision_x), ("right", collision_x)):
         ET.SubElement(mount, "geom", name=f"ag145_{side}_finger_collision",
                       type="box", pos=f"{x} 0 0.175", size="0.012 0.018 0.028",
                       density="0", rgba="0 0 0 0", contype="1", conaffinity="1")
 
     gripper_share = gripper_urdf.parent.parent
     seen: set[str] = set()
+    grasp_joint_sign = {
+        "left_outer_knuckle_joint": 1, "left_inner_knuckle_joint": 1,
+        "left_finger_joint": -1, "right_outer_knuckle_joint": -1,
+        "right_inner_knuckle_joint": -1, "right_finger_joint": 1,
+    }
 
     def add_link(link_name: str, parent_body: ET.Element) -> None:
         link = links[link_name]
@@ -214,9 +225,20 @@ def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
                               rgba=color.attrib.get("rgba", "0.4 0.4 0.4 1") if color is not None else "0.4 0.4 0.4 1")
         for joint, child_name in children[link_name]:
             origin = joint.find("origin")
+            joint_angle = (grasp_angle_rad * grasp_joint_sign[joint.attrib["name"]]
+                           if grasp_angle_rad is not None and joint.attrib["name"] in grasp_joint_sign
+                           else 0.0)
+            # The AG145 URDF's actuated joint origins have zero RPY and all
+            # six axes are +Y. Their mimic signs freeze the links in one pose.
+            if joint_angle:
+                if origin is not None and origin.attrib.get("rpy", "0 0 0") != "0 0 0":
+                    raise ValueError("AG145 grasp pose requires zero-RPY actuated joint origins")
+                quat = f"{math.cos(joint_angle / 2):.12g} 0 {math.sin(joint_angle / 2):.12g} 0"
+            else:
+                quat = _urdf_quat(origin.attrib.get("rpy", "0 0 0") if origin is not None else "0 0 0")
             body = ET.SubElement(parent_body, "body", name=f"ag145_{child_name}",
                                  pos=origin.attrib.get("xyz", "0 0 0") if origin is not None else "0 0 0",
-                                 quat=_urdf_quat(origin.attrib.get("rpy", "0 0 0") if origin is not None else "0 0 0"))
+                                 quat=quat)
             add_link(child_name, body)
 
     add_link("base_link", mount)

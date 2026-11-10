@@ -303,10 +303,16 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
     scene_path = None
     gripper_model_info = None
     if gripper_type == "ag145":
-        from .ag145_model import AG145_MASS_KG, AG145_TCP_OFFSET_MM, build_ag145_scene
+        from .ag145_model import (AG145_BOX_GRASP_ANGLE_RAD, AG145_MASS_KG,
+                                 AG145_TCP_OFFSET_MM, build_ag145_scene)
         precreated_trial = create_trial(root, "simulation", config.trajectory_id)
-        scene_path = build_ag145_scene(precreated_trial[0] / "ag145_scene.xml")
-        gripper_model_info = {"configuration": "fixed open pose", "mass_kg": AG145_MASS_KG,
+        grasp_angle = AG145_BOX_GRASP_ANGLE_RAD if payload_spec is not None else None
+        scene_path = build_ag145_scene(precreated_trial[0] / "ag145_scene.xml",
+                                       grasp_angle_rad=grasp_angle)
+        gripper_model_info = {"configuration": "fixed grasp pose" if grasp_angle is not None else "fixed open pose",
+                              "grasp_angle_rad": grasp_angle,
+                              "grasp_model": "ideal fixed attachment; no finger actuation/contact force" if grasp_angle is not None else None,
+                              "mass_kg": AG145_MASS_KG,
                               "inertia": "uncalibrated box approximation",
                               "collision": "approximate bounding boxes",
                               "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion",

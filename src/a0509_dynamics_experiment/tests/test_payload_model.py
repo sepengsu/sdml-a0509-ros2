@@ -89,8 +89,10 @@ def test_cli_sends_complete_payload_spec_to_simulation(tmp_path, monkeypatch, gr
 @pytest.mark.parametrize("gripper,mass", [("ag145", .5), ("mdpg_1s1", 1.0)])
 def test_payload_changes_scene_mass_and_inverse_dynamics(tmp_path, gripper, mass):
     if gripper == "ag145":
-        from a0509_dynamics_experiment.ag145_model import build_ag145_scene
-        scene = build_ag145_scene(tmp_path / "scene.xml")
+        from a0509_dynamics_experiment.ag145_model import (AG145_BOX_GRASP_ANGLE_RAD,
+                                                            build_ag145_scene)
+        scene = build_ag145_scene(tmp_path / "scene.xml",
+                                  grasp_angle_rad=AG145_BOX_GRASP_ANGLE_RAD)
     else:
         from mdpg_1s1_description.model import build_mdpg_scene
         scene = build_mdpg_scene(tmp_path / "scene.xml", (0, 0, 0), (0, 0, 0),
@@ -105,6 +107,23 @@ def test_payload_changes_scene_mass_and_inverse_dynamics(tmp_path, gripper, mass
     assert after.body("experiment_payload").mass == pytest.approx(mass)
     assert after.geom("experiment_payload_visual").size == pytest.approx(
         [0.03, 0.02, 0.02])
+    if gripper == "ag145":
+        state = mujoco.MjData(after)
+        mujoco.mj_forward(after, state)
+        base = after.body("ag145_base_link").id
+        rotation = state.xmat[base].reshape(3, 3)
+        inner_faces = []
+        for side in ("left", "right"):
+            geom_id = after.geom(f"ag145_{side}_finger_visual").id
+            mesh_id = after.geom_dataid[geom_id]
+            start = after.mesh_vertadr[mesh_id]
+            vertices = after.mesh_vert[start:start + after.mesh_vertnum[mesh_id]]
+            world = ((state.geom_xmat[geom_id].reshape(3, 3) @ vertices.T).T
+                     + state.geom_xpos[geom_id])
+            local = (rotation.T @ (world - state.xpos[base]).T).T
+            inner_faces.append(local[:, 0].max() if side == "left" else local[:, 0].min())
+            assert local[:, 2].min() < 0.195 < local[:, 2].max()
+        assert inner_faces == pytest.approx([-0.03, 0.03], abs=0.002)
 
     def torque(model):
         data = mujoco.MjData(model)

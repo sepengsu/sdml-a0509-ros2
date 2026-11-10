@@ -14,7 +14,8 @@ import mujoco
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from a0509_dynamics_experiment.ag145_model import build_ag145_scene, source_paths
+from a0509_dynamics_experiment.ag145_model import (AG145_BOX_GRASP_ANGLE_RAD,
+                                                   build_ag145_scene, source_paths)
 from a0509_dynamics_experiment.payload_model import attach_payload, load_payload_spec
 from mdpg_1s1_description.model import build_mdpg_scene
 
@@ -55,7 +56,8 @@ def _scene(condition: str, gripper: str, mass: float) -> tuple[Path, dict | None
     if gripper == "none":
         scene = source_paths()[0]
     elif gripper == "ag145":
-        scene = build_ag145_scene(folder / "scene.xml")
+        scene = build_ag145_scene(folder / "scene.xml",
+                                 grasp_angle_rad=AG145_BOX_GRASP_ANGLE_RAD if mass else None)
     else:
         scene = build_mdpg_scene(folder / "scene.xml", (0, 0, 0), (0, 0, 0),
                                  dynamics_model="box_approx")
@@ -112,6 +114,7 @@ def render_condition(condition: str, gripper: str, mass: float) -> dict:
         "mdpg_mount_xyz_m": [0, 0, 0] if gripper == "mdpg_1s1" else None,
         "mdpg_mount_rpy_rad": [0, 0, 0] if gripper == "mdpg_1s1" else None,
         "mdpg_mount_verified": False if gripper == "mdpg_1s1" else None,
+        "ag145_grasp_angle_rad": AG145_BOX_GRASP_ANGLE_RAD if gripper == "ag145" and mass else None,
         "payload_spec_sha256": payload["spec_sha256"] if payload else None,
         "render_only": True,
     }

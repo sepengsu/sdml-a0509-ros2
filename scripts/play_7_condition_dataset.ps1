@@ -107,6 +107,9 @@ $mountDeclaration | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Pat
 $number = 0
 foreach ($job in $jobs) {
     $number++
+    if ((Get-FileHash -LiteralPath $specHost -Algorithm SHA256).Hash.ToLowerInvariant() -ne $specSha256) {
+        throw 'Payload specification changed during collection. Restart this script to revalidate the model and resume.'
+    }
     $trialRoot = Join-Path $resultsRoot (Join-Path $job.Condition ("repeat_{0:000}" -f $job.Repeat))
     $trialPath = Join-Path $trialRoot (Join-Path 'simulation' $job.Trajectory)
     $finished = @(Get-ChildItem -LiteralPath $trialPath -Directory -Filter 'trial_*' -ErrorAction SilentlyContinue | Where-Object {
@@ -120,6 +123,11 @@ foreach ($job in $jobs) {
                 [double]$metadata.payload_mass_kg -ne $job.PayloadKg -or
                 $metadata.trajectory_id -ne $job.Trajectory) { return $false }
             if ($job.PayloadKg -gt 0 -and $metadata.payload_model.spec_sha256 -ne $specSha256) {
+                return $false
+            }
+            if ($job.Gripper -eq 'ag145' -and $job.PayloadKg -gt 0 -and
+                ($metadata.gripper_model.configuration -ne 'fixed grasp pose' -or
+                 [math]::Abs([double]$metadata.gripper_model.grasp_angle_rad - 0.60) -gt 1e-12)) {
                 return $false
             }
             if ($job.Gripper -eq 'mdpg_1s1') {
