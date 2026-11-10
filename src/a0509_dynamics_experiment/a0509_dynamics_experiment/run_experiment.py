@@ -128,8 +128,17 @@ def _config(args: argparse.Namespace, trajectory_id: str) -> TrajectoryConfig:
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
+    raw_argv = sys.argv[1:] if argv is None else argv
     args = parser.parse_args(argv)
     _validate(parser, args)
+    if args.trajectory == "T16":
+        if args.gripper_type == "none":
+            if any(token == "--gripper-type" or token.startswith("--gripper-type=")
+                   for token in raw_argv):
+                parser.error("optimized T16 requires AG145; explicit gripper none is unsupported")
+            args.gripper_type = "ag145"
+        elif args.gripper_type != "ag145":
+            parser.error("optimized T16 is validated only for the AG145 MuJoCo scene")
     payload_mass = args.payload_mass if args.payload_mass is not None else 0.0
     if args.simulation and args.execute:
         print("--simulation takes priority; --execute has no real-robot effect.", file=sys.stderr)
@@ -214,6 +223,9 @@ def main(argv: list[str] | None = None) -> int:
                     plan = generate(config)
                 save_trajectory(plan, folder)
                 save_trajectory_plot(plan, folder, **plot_options)
+                if trajectory_id == "T16":
+                    from .t16_figures import save_t16_figures
+                    preview_details["fourier_figures"] = save_t16_figures(folder, scene, plan)
                 save_metadata(folder, plan, "preview", trial_id, preview_details)
             elif args.simulation:
                 from .simulation_executor import execute

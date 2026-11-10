@@ -271,8 +271,10 @@ Bag 기록 시간이 추가됩니다. 원본 ROS bridge 데이터와 시간 이�
 저장합니다.
 
 T15는 J1~J6의 저속·방향 반전 구간을 늘려 저속 동역학을 살펴보는 신규
-설계입니다. T16은 다른 시작 자세에서 6축 chirp를 결합한 독립 시험
-궤적입니다. T1~T14의 기하와 T15~T16의 명세는 코드와 각 `trajectory.json`에
+설계입니다. 기존 T16 6축 chirp의 정의는 `config/t16_legacy_chirp.json`에
+백업했습니다. 변경 전 `data/grid_16_trajectories/` 수집 결과는 이전 T16을
+포함하므로 새 Fourier T16 결과와 같은 데이터셋으로 합치지 않습니다.
+T1~T14의 기하와 T15~T16의 명세는 코드와 각 `trajectory.json`에
 보존합니다. T1~T4는 diagnostic, T5~T11/T15는 train, T12는 validation,
 T13/T14/T16은 test로 두며,
 반복 샘플을 무작위로 train/test에 나누지 않습니다.
@@ -301,6 +303,49 @@ docker logs -f a0509-grid-grid_16_trajectories
 시간은 가장 긴 T3의 약 122초 × 21장면에 모델 준비·Bag·CSV·그래프
 출력 시간이 더해진 값입니다. 16대가 같은 시간에 움직여도 각 관절의 물리
 계산은 수행하므로 GPU나 16배 속도 향상을 가정하지 않습니다.
+
+## T16: A0509/AG145 최적 Fourier 가진
+
+T16은 10초·100 Hz·3차 Fourier 급수로 여섯 관절을 동시에 가진합니다.
+24개 자유 계수에서 나머지 계수를 구성하여 양끝에서 기준 자세, 속도 0,
+가속도 0을 해석적으로 만족합니다. `t16_fourier_optimized.json`은 고정
+난수 시드와 SciPy 제약 최적화로 만든 계수, 초기/최종 조건수, 특이값,
+유효 rank 및 촘촘한 경로 안전 검사 결과를 담습니다. 기존 `model/rbd.py`에는
+선형 식별 regressor가 없으므로 목적함수는 MuJoCo 역동역학 토크의 링크
+질량·국소 COM z·Izz·관절 감쇠 민감도를 사용한 **parameter-sensitivity
+proxy**입니다. 열은 기준 경로의 고정 크기로 정규화하고 SVD에서 식별 가능한
+고정 부분공간의 조건수를 최소화합니다. 이는 논문의 정확한 관측행렬이나
+전역 최적해를 뜻하지 않습니다. AG145 질량/충돌/관성 모델 자체도 근사입니다.
+
+T16은 `test`로 유지하며 T5~T11/T15 학습 자료에 넣지 않습니다. 최적화에는
+테스트 측정 토크나 PKAN 결과를 사용하지 않습니다. 물리 A0509 이동은 차단됩니다.
+기준 자세·계수·주기·AG145 모델을 바꾸면 이 최적화 결과는 무효입니다.
+
+```powershell
+# Docker/ROS 환경에서 계수를 재생성할 때만 실행. 현재 결과는 config에 동봉.
+docker exec -e PYTHONPATH=/ros2_ws/src/a0509_dynamics_experiment a0509-dynamics `
+  python3 -m a0509_dynamics_experiment.t16_optimize `
+  --work-dir /ros2_ws/data/t16_fourier_design `
+  --output /ros2_ws/src/a0509_dynamics_experiment/config/t16_fourier_optimized.json
+
+# ROS/로봇 연결 없이 PNG/대화형 HTML/CSV/JSON과 4×4 gallery 생성
+docker exec -e PYTHONPATH=/ros2_ws/src/a0509_dynamics_experiment a0509-dynamics `
+  python3 -m a0509_dynamics_experiment.run_experiment `
+  --preview --trajectory T16 --gripper-type ag145 --results-dir /ros2_ws/data/t16_fourier_preview
+docker cp a0509-dynamics:/ros2_ws/data/t16_fourier_preview .\data\
+
+# 격리 ROS domain의 MuJoCo 실행 및 기존 동역학 CSV/Bag 형식으로 기록
+docker exec -e PYTHONPATH=/ros2_ws/src/a0509_dynamics_experiment a0509-dynamics `
+  bash -lc "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && python3 -m a0509_dynamics_experiment.run_experiment --simulation --trajectory T16 --gripper-type ag145 --sim-domain-id 181 --results-dir /ros2_ws/data/t16_fourier_simulation"
+docker cp a0509-dynamics:/ros2_ws/data/t16_fourier_simulation .\data\
+```
+
+PowerShell의 줄 끝 백틱 뒤에는 공백을 넣지 마세요. ROS2 설치 후에는 같은 옵션을 `ros2 run a0509_dynamics_experiment
+run_experiment`에 전달할 수 있습니다. 기존 21회 병렬 캠페인에서 새 T16을
+시험하려면 `-ResultsName grid_16_fourier_t16`으로 별도 경로를 선택하고
+새 파일럿을 수행해야 합니다. 다른 tool/payload 조건의 T16은 AG145 무부하에서
+최적화된 계수를 재사용하는 전이 시험이며, 해당 조건에 대한 최적 경로라는
+뜻이 아닙니다.
 
 ## 안전과 검증 상태
 

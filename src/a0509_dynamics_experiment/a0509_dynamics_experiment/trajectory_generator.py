@@ -64,14 +64,9 @@ EXCITATIONS = {
                            (3, 1.5, .055, .055, 1.1, 8., 16.),
                            (4, 1.5, .080, .080, .3, 0., 16.),
                            (5, 1.5, .065, .065, 1.4, 0., 16.))},
-    "T16": {"name": "held-out posture coupled chirp", "duration": 18.0, "split": "test",
+    "T16": {"name": "Optimized Fourier Excitation", "duration": 10.0, "split": "test",
             "home": (-.25, -.72, 1.25, .18, -.40, .12),
-            "components": ((0, 4.0, .11, .25, .2, 0., 18.),
-                           (1, 4.0, .08, .22, .9, 0., 18.),
-                           (2, 3.0, .14, .28, 1.5, 0., 18.),
-                           (3, 3.0, .12, .30, .4, 0., 18.),
-                           (4, 3.0, .16, .32, 1.0, 0., 18.),
-                           (5, 2.0, .18, .34, 1.8, 0., 18.))},
+            "kind": "optimized_fourier"},
 }
 EXCITATION_SEED = 20261110  # no stochastic sample is drawn in this version
 
@@ -82,6 +77,11 @@ def is_joint_trajectory(trajectory_id: str) -> bool:
 
 def excitation_metadata(trajectory_id: str) -> dict:
     spec = EXCITATIONS[trajectory_id]
+    if trajectory_id == "T16":
+        from .t16_fourier import load_spec
+        result = load_spec().copy()
+        result["split"] = "test"
+        return result
     return {"name": spec["name"], "duration_s": spec["duration"], "split": spec["split"],
             "home_rad": spec.get("home", BASE_HOME), "seed": EXCITATION_SEED,
             "components": [{"joint": item[0]+1, "amplitude_deg": item[1], "f0_hz": item[2],
@@ -114,6 +114,12 @@ class TrajectoryConfig:
     def validate(self) -> None:
         if self.trajectory_id not in TRAJECTORY_IDS:
             raise ValueError("unsupported trajectory_id")
+        if self.trajectory_id == "T16":
+            if (self.speed != "low" or self.segment_seconds is not None or self.time_scale != 1.0 or
+                    self.sample_hz != 100 or self.joint_amplitude_deg != 5.0 or
+                    tuple(self.joint_start_rad) != tuple(EXCITATIONS["T16"]["home"]) or
+                    self.joint_indices != (0, 1, 2, 3, 4, 5)):
+                raise ValueError("optimized T16 requires its validated home, 10 s period, 100 Hz and unscaled six-joint coefficients")
         if self.speed not in ("low", "medium"):
             raise ValueError("speed must be low or medium")
         if self.repeats < 1 or self.sample_hz < 2:
@@ -268,8 +274,42 @@ def _generate_excitation(config: TrajectoryConfig) -> TrajectoryPlan:
     return TrajectoryPlan(config, tuple(points), tuple(waypoint_indices))
 
 
+def _generate_fourier_t16(config: TrajectoryConfig) -> TrajectoryPlan:
+    from .t16_fourier import evaluate, load_spec
+    spec = load_spec()
+    free = spec["free_coefficients_rad_s"]
+    home = tuple(spec["home_rad"])
+    if tuple(config.joint_start_rad) != home:
+        raise ValueError("T16 home differs from the optimized MuJoCo posture")
+    points: list[TrajectoryPoint] = []
+    waypoints: list[int] = []
+    zero = (0.0,) * 6
+    n_pre = round(config.pre_hold_seconds * config.sample_hz)
+    n_post = round(config.post_hold_seconds * config.sample_hz)
+
+    def append(index, phase, q, dq, ddq, waypoint=False):
+        points.append(TrajectoryPoint(index / config.sample_hz, phase, waypoint,
+                                      None, None, None, q, dq, ddq))
+        if waypoint:
+            waypoints.append(len(points) - 1)
+
+    for k in range(n_pre + 1):
+        append(k, "pre_hold", home, zero, zero, k == 0)
+    index = n_pre
+    for repeat in range(config.repeats):
+        for k in range(1, 1001):
+            q, dq, ddq = evaluate(free, home, k / 100, 10.0)
+            append(index + k, f"motion_{repeat+1}", q, dq, ddq, k == 1000)
+        index += 1000
+    for k in range(1, n_post + 1):
+        append(index + k, "post_hold", home, zero, zero, k == n_post)
+    return TrajectoryPlan(config, tuple(points), tuple(waypoints))
+
+
 def generate(config: TrajectoryConfig) -> TrajectoryPlan:
     config.validate()
+    if config.trajectory_id == "T16":
+        return _generate_fourier_t16(config)
     if config.time_scale != 1.0:
         factor = config.time_scale
         base = replace(config, time_scale=1.0,

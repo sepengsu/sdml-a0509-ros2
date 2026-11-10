@@ -1,0 +1,16 @@
+{
+  "name": "held-out posture coupled chirp",
+  "duration_s": 18.0,
+  "split": "test",
+  "home_rad": [-0.25, -0.72, 1.25, 0.18, -0.40, 0.12],
+  "components": [
+    [0, 4.0, 0.11, 0.25, 0.2, 0.0, 18.0],
+    [1, 4.0, 0.08, 0.22, 0.9, 0.0, 18.0],
+    [2, 3.0, 0.14, 0.28, 1.5, 0.0, 18.0],
+    [3, 3.0, 0.12, 0.30, 0.4, 0.0, 18.0],
+    [4, 3.0, 0.16, 0.32, 1.0, 0.0, 18.0],
+    [5, 2.0, 0.18, 0.34, 1.8, 0.0, 18.0]
+  ],
+  "source": "trajectory_generator.py before Fourier redesign; grid_simulation time_scale 2.25",
+  "note": "Archive for comparison only; not the executable T16."
+}

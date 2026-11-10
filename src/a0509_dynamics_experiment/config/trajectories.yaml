@@ -12,8 +12,9 @@ T4:
   name: Joint Excitation
   amplitude_deg: 5
   default_mode: sequential
-# T5-T16 definitions are implemented in trajectory_generator.EXCITATIONS.
-# All are joint-space, 100 Hz, 1 s pre/post hold, C2 quintic envelopes.
+# T5-T15 definitions are implemented in trajectory_generator.EXCITATIONS.
+# They are joint-space, 100 Hz, 1 s pre/post hold, C2 quintic envelopes.
+# T16 uses the separately validated Fourier endpoint constraints below.
 # Frequencies, phase, and per-joint amplitudes are saved in each trial metadata.
 dynamics10:
   seed: 20261110
@@ -32,3 +33,18 @@ dynamics10:
     T12: {name: "J1/J4/J6 validation chirp", duration_s: 14}
     T13: {name: "shifted-posture multi-sine", duration_s: 14}
     T14: {name: "shifted-posture mixed excitation", duration_s: 15}
+
+# T16 replaces only the former held-out chirp. Its exact validated coefficients,
+# objective metrics and simulation-only limits are in t16_fourier_optimized.json.
+# t16_legacy_chirp.json preserves the former definition for Figure 1.
+T16:
+  name: Optimized Fourier Excitation
+  split: test
+  model: A0509 with approximate fixed AG145
+  harmonics: 3
+  fundamental_hz: 0.1
+  period_s: 10.0
+  sample_hz: 100
+  coefficient_file: t16_fourier_optimized.json
+  objective_kind: parameter-sensitivity proxy
+  real_motion_allowed: false
