@@ -1,0 +1,186 @@
+{
+  "created_utc": "2026-11-10T10:28:28.014531+00:00",
+  "trajectory_id": "T1",
+  "source_trial": "D:\\Code\\sdml-doosan-robot\\results\\mdpg_visual_source\\simulation\\T1\\trial_001",
+  "source_trial_relative_to_repo": "results/mdpg_visual_source/simulation/T1/trial_001",
+  "source_ros_domain_id": 173,
+  "analysis_mujoco_version": "3.2.7",
+  "source_dynamics_sha256": "5d395c76bd975f6e9c16111c8fb428556dd829473131718cc220ec695dafb4d3",
+  "visual_video_sha256": "57ae15d11a63eb282d329db1339c351f380d5feeaa05ab83307685405af0f785",
+  "scope": "bare A0509 MuJoCo arm states; mDPG is visual-only in the separate video",
+  "torque_definition": "reconstructed MuJoCo inverse dynamics, not actuator or physical torque sensing",
+  "decomposition": "inverse = M(q)ddq + gravity(q) + [qfrc_bias(q,dq)-gravity(q)] + dof_damping*dq",
+  "gravity_method": "same A0509 MuJoCo model with logged q, zero qvel, and mj_forward",
+  "sample_count": 1001,
+  "sim_duration_s": 10.000000000999998,
+  "sampling": {
+    "nominal_hz": 100,
+    "observed_joint_state_hz": 99.98869545557316,
+    "median_row_interval_s": 0.009999999999999787,
+    "max_row_interval_s": 0.04999999999999982,
+    "max_plan_row_time_deviation_s": 0.03999999999999982,
+    "row_gaps_gt_1p5_median": 3,
+    "upstream_estimated_missing_rate": 0.0
+  },
+  "tracking": {
+    "joint_rmse_rad": [
+      0.021221191330381098,
+      0.022591252617690735,
+      0.01362879362048295,
+      0.012111259589949314,
+      0.009132885948998156,
+      0.023571144670148494
+    ],
+    "joint_max_abs_rad": [
+      0.03994534884339851,
+      0.04091706855622207,
+      0.02859788224436355,
+      0.025708229518981468,
+      0.017732021287841015,
+      0.04722535030549306
+    ],
+    "tcp_arm_rmse_mm": [
+      11.466784347026609,
+      0.6074390639918603,
+      2.153944382530078
+    ],
+    "tcp_arm_max_abs_mm": [
+      20.699165766925518,
+      1.1300905597556437,
+      3.061043392793522
+    ],
+    "planned_tcp_axis_range_mm": [
+      120.0,
+      0.0,
+      0.0
+    ],
+    "measured_arm_tcp_axis_range_mm": [
+      121.82986221243681,
+      1.3929350751122058,
+      2.935958409559248
+    ]
+  },
+  "distribution": {
+    "q_range_rad": [
+      0.23801492059853802,
+      0.25498861829602193,
+      0.1384296809887764,
+      0.1715736546703274,
+      0.1312641564746232,
+      0.3377103270233355
+    ],
+    "dq_rms_rad_s": [
+      0.06172896762608951,
+      0.06588547148069111,
+      0.03602233619509357,
+      0.045595555294520786,
+      0.03444784940183485,
+      0.08916164961025402
+    ],
+    "dq_abs_max_rad_s": [
+      0.11547808481954772,
+      0.1178655874165489,
+      0.06605561794875779,
+      0.09203772101158568,
+      0.06467024461797578,
+      0.175831490185886
+    ],
+    "ddq_rms_rad_s2": [
+      0.08364567827872144,
+      0.08385884865272564,
+      0.057446897887216006,
+      0.07754571676334769,
+      0.05214058057940074,
+      0.14815730328222104
+    ],
+    "ddq_abs_max_rad_s2": [
+      0.3117525908552482,
+      0.26632323021507515,
+      0.48777195023115033,
+      0.3209817322131607,
+      0.17336284249953757,
+      0.6095737262239365
+    ]
+  },
+  "torque": {
+    "inverse_rms_nm": [
+      49.3831972138278,
+      52.92571753780351,
+      32.98624617037567,
+      27.473318783366018,
+      20.669475231586127,
+      53.49697741570748
+    ],
+    "inverse_abs_max_nm": [
+      92.36435573633422,
+      95.21940531048858,
+      69.40813541819153,
+      57.53273691837692,
+      38.94515216957432,
+      105.49905440386064
+    ],
+    "inertia_rms_nm": [
+      0.026222291494055156,
+      0.15871503685516955,
+      0.024170350632692225,
+      0.003094486352796553,
+      0.0022079984254745077,
+      8.233113060510852e-05
+    ],
+    "gravity_rms_nm": [
+      0.0,
+      4.887661962692797,
+      16.42956693900298,
+      2.3132560290668884,
+      0.3254330864200283,
+      2.551389024364903e-05
+    ],
+    "velocity_bias_rms_nm": [
+      0.0013967486124843,
+      0.004305328554661394,
+      0.004448462058933564,
+      0.0009300641652976471,
+      0.000167467176428277,
+      1.2526613468553305e-05
+    ],
+    "damping_rms_nm": [
+      49.38317410087161,
+      52.70837718455293,
+      28.81786895607485,
+      27.357333176712473,
+      20.668709641100897,
+      53.49698976615241
+    ]
+  },
+  "quality": {
+    "missing_required_or_actuator_cells": {
+      "q": 0,
+      "dq": 0,
+      "ddq": 0,
+      "target_q": 0,
+      "tcp_position": 0,
+      "qfrc_inverse": 0,
+      "qfrc_actuator": 1001
+    },
+    "qfrc_applied_unavailable_rows": 1001,
+    "nonfinite_required_rows": 0,
+    "gross_outlier_candidate_counts": {
+      "position_jump_gt_0p05_rad": 0,
+      "velocity_jump_gt_0p5_rad_s": 0,
+      "abs_acceleration_gt_10_rad_s2": 0,
+      "abs_inverse_torque_gt_200_nm": 0
+    },
+    "gross_screen_thresholds_are_heuristic": true,
+    "rows_with_contact_in_arm_model": 0,
+    "max_contact_count_in_arm_model": 0,
+    "physics_reconstruction_rmse_nm": 2.09601960938447e-15,
+    "physics_reconstruction_max_abs_nm": 1.4210854715202004e-14,
+    "source_physics_actuator_available": false
+  },
+  "limits": [
+    "one recorded trial",
+    "mDPG mass/contact/suction not simulated",
+    "acceleration is a five-sample velocity slope in simulation time",
+    "gross anomaly screen does not detect every sensor or model error"
+  ]
+}

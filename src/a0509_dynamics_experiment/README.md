@@ -102,6 +102,8 @@ ros2 run a0509_dynamics_experiment render_mdpg_replay \
 영상 출력은 `mdpg_t1_visual_replay.mp4`, 대표 화면은 `thumbnail.png`입니다. `metadata.json`에는 원본 T1 CSV 해시, 그리퍼를 제외한 원본 시뮬레이션 조건, 미검증 장착 상태가 기록됩니다. 실측 장착 변환이 확보되면 `--mount-xyz`와 `--mount-rpy`를 해당 측정값으로 바꿔 재렌더링할 수 있습니다.
 이번 T1 실행의 [영상](../../docs/media/mdpg_t1_visual/mdpg_t1_visual_replay.mp4), [대표 화면](../../docs/media/mdpg_t1_visual/thumbnail.png), [출처 메타데이터](../../docs/media/mdpg_t1_visual/metadata.json)도 저장소에 보존했습니다.
 
+이 실행의 [궤적 추종·q–dq–ddq·토크·품질 분석](../../docs/media/mdpg_t1_visual/analysis/README.md)에는 그래프 7개, 관절별 CSV와 기계 판독용 JSON이 있습니다. 원본은 그리퍼 질량이 없는 팔 MuJoCo 실행이므로, 토크 그래프는 mDPG 부착 후 토크 측정으로 해석하지 않습니다.
+
 ## 결과와 데이터 의미
 
 ### Dynamics10: 신규 관절 여기 T5~T14
