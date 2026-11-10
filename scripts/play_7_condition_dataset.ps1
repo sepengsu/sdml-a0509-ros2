@@ -1,10 +1,11 @@
 <#
 Plan or play 7 tool/payload conditions x T1..T14 x 3 independent trials.
-No real-robot mode is used. -Play refuses incomplete payload and mDPG mount data.
+No real-robot mode is used. The CAD-face mount fixture is a declared simulation assumption.
 #>
 param(
     [switch]$Play,
     [switch]$RecordVideo,
+    [switch]$UseCadFaceCenterFixture,
     [double[]]$MdpgMountXyz,
     [double[]]$MdpgMountRpy,
     [string]$Container = 'a0509-dynamics',
@@ -51,11 +52,22 @@ $planPath = Join-Path $resultsRoot 'collection_plan.csv'
 $jobs | Export-Csv -LiteralPath $planPath -NoTypeInformation -Encoding UTF8
 Write-Host "Planned $($jobs.Count) simulation trials: $planPath"
 if (-not $Play) {
-    Write-Host 'Dry run only. Payloads use declared uniform-box simulation assumptions. Provide measured mDPG link_6 mount values, then rerun with -Play.'
+    Write-Host 'Dry run only. Use -UseCadFaceCenterFixture for the unmeasured video/CAD alignment or supply a measured mDPG mount with -Play.'
     return
 }
 
-# Check every condition before the first trial, so a missing physical value
+if ($UseCadFaceCenterFixture) {
+    if ($PSBoundParameters.ContainsKey('MdpgMountXyz') -or $PSBoundParameters.ContainsKey('MdpgMountRpy')) {
+        throw 'Choose either -UseCadFaceCenterFixture or explicit mDPG mount arrays.'
+    }
+    # CAD red face is centered at the raw origin; its internal 180-degree X
+    # rotation is already applied in the URDF and MuJoCo tool model.
+    $MdpgMountXyz = [double[]]@(0, 0, 0)
+    $MdpgMountRpy = [double[]]@(0, 0, 0)
+    Write-Warning 'Using an unmeasured simulation fixture: red CAD face center at link_6 origin. Not a real adapter calibration.'
+}
+
+# Check every declared model input before the first trial, so missing values
 # cannot leave a partially collected 294-trial campaign.
 foreach ($values in @($MdpgMountXyz, $MdpgMountRpy)) {
     if ($null -eq $values -or $values.Count -ne 3) {
@@ -69,6 +81,7 @@ foreach ($values in @($MdpgMountXyz, $MdpgMountRpy)) {
 }
 $specHost = Join-Path $repository 'src/a0509_dynamics_experiment/config/payload_conditions.json'
 if (-not (Test-Path -LiteralPath $specHost)) { throw "Missing payload spec: $specHost" }
+$specSha256 = (Get-FileHash -LiteralPath $specHost -Algorithm SHA256).Hash.ToLowerInvariant()
 $running = & docker inspect --format '{{.State.Running}}' $Container 2>$null
 if ($LASTEXITCODE -ne 0 -or $running.Trim() -ne 'true') { throw "Docker container $Container is not running." }
 
@@ -82,6 +95,15 @@ if ($LASTEXITCODE -ne 0) { throw 'Payload specs are incomplete or invalid; no tr
 $invariant = [System.Globalization.CultureInfo]::InvariantCulture
 $mountXyzText = @($MdpgMountXyz | ForEach-Object { $_.ToString('R', $invariant) })
 $mountRpyText = @($MdpgMountRpy | ForEach-Object { $_.ToString('R', $invariant) })
+$mountDeclaration = [ordered]@{
+    source = $(if ($UseCadFaceCenterFixture) { 'cad_red_face_center_simulation_fixture' } else { 'user_supplied_transform' })
+    xyz_m = @($MdpgMountXyz)
+    rpy_rad = @($MdpgMountRpy)
+    verified_for_real_robot = $false
+    note = 'The model rotates the raw CAD 180 degrees about X internally. This declaration applies only to MuJoCo dataset collection; adapter, TCP and pneumatic IO remain unverified.'
+    payload_spec_sha256 = $specSha256
+}
+$mountDeclaration | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $resultsRoot 'mount_declaration.json') -Encoding UTF8
 $number = 0
 foreach ($job in $jobs) {
     $number++
@@ -94,6 +116,23 @@ foreach ($job in $jobs) {
         if (-not ((Test-Path $metadataPath) -and (Test-Path $csvPath) -and (Test-Path $bagPath))) { return $false }
         try {
             $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+            if ($metadata.gripper_type -ne $job.Gripper -or
+                [double]$metadata.payload_mass_kg -ne $job.PayloadKg -or
+                $metadata.trajectory_id -ne $job.Trajectory) { return $false }
+            if ($job.PayloadKg -gt 0 -and $metadata.payload_model.spec_sha256 -ne $specSha256) {
+                return $false
+            }
+            if ($job.Gripper -eq 'mdpg_1s1') {
+                $savedXyz = @($metadata.gripper_model.mount_xyz_m)
+                $savedRpy = @($metadata.gripper_model.mount_rpy_rad)
+                if ($savedXyz.Count -ne 3 -or $savedRpy.Count -ne 3) { return $false }
+                for ($i = 0; $i -lt 3; $i++) {
+                    if ([math]::Abs([double]$savedXyz[$i] - $MdpgMountXyz[$i]) -gt 1e-12 -or
+                        [math]::Abs([double]$savedRpy[$i] - $MdpgMountRpy[$i]) -gt 1e-12) {
+                        return $false
+                    }
+                }
+            }
             return ($metadata.execution_success -eq $true -and
                     $metadata.sample_count -gt 0 -and
                     $metadata.quality.rows_written -eq $metadata.sample_count)

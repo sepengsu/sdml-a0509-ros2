@@ -120,7 +120,7 @@ ros2 run a0509_dynamics_experiment render_mdpg_replay \
 
 0.5/1.0 kg 조건은 사용자가 허용한 **시뮬레이션 전용 균일 직사각형 박스 근사**로 설정했습니다. 두 질량 모두 박스 크기 60 × 40 × 40 mm를 쓰고, 중심질량은 박스 중심, 관성은 `Ixx=m(y²+z²)/12`, `Iyy=m(x²+z²)/12`, `Izz=m(x²+y²)/12`로 계산합니다. AG145 박스 중심은 모델 손가락 충돌체 사이의 `z=175 mm`로 가정합니다. 모델 손가락 사이 간격 106 mm보다 박스 폭 60 mm가 작고, 1.0 kg은 [AG-105-145 제조사 권장 작업물 질량 2 kg](https://en.dh-robotics.com/wp-content/uploads/2023/05/Servo-Electric-Gripper_DH-Robotics_EN2303.pdf)보다 작습니다. mDPG 박스는 명목 흡착 TCP `z=90 mm` 앞에 놓아 중심을 `z=110 mm`로 가정했습니다. 1.0 kg은 사용자 제공 사양 이미지의 최대 페이로드 1.5 kg보다 작습니다. 이 치수·부착 위치·COM은 **실측값이 아니며 실제 파지/흡착 또는 동적 안전성을 보증하지 않습니다.**
 
-이 가정은 `config/payload_conditions.json`의 네 항목과 각 trial metadata에 기록됩니다. `mount_xyz_m`/`mount_rpy_rad`는 해당 그리퍼 MuJoCo 본체(`ag145_base_link` 또는 `mdpg_base_link`)에서 박스 중심까지의 변환이고, `com_xyz_m`은 그 중심에서 질량중심까지입니다. `inertia_model: uniform_box`와 `box_size_xyz_m`에서 관성텐서를 계산합니다. 직접 측정한 텐서를 사용하려면 `inertia_model`/`box_size_xyz_m`을 제거하고 `inertia_kg_m2`를 `[ixx, iyy, izz, ixy, ixz, iyz]` 순서로 넣습니다. 단위는 m, rad, kg·m²입니다. 설정이 비어 있거나 관성텐서가 물리적으로 유효하지 않으면 첫 trial 전에 차단합니다. **mDPG의 별도 `link_6` 장착 변환은 아직 실측값이 없어 `-Play` 실행 시 입력해야 합니다.**
+이 가정은 `config/payload_conditions.json`의 네 항목과 각 trial metadata에 기록됩니다. `mount_xyz_m`/`mount_rpy_rad`는 해당 그리퍼 MuJoCo 본체(`ag145_base_link` 또는 `mdpg_base_link`)에서 박스 중심까지의 변환이고, `com_xyz_m`은 그 중심에서 질량중심까지입니다. `inertia_model: uniform_box`와 `box_size_xyz_m`에서 관성텐서를 계산합니다. 직접 측정한 텐서를 사용하려면 `inertia_model`/`box_size_xyz_m`을 제거하고 `inertia_kg_m2`를 `[ixx, iyy, izz, ixy, ixz, iyz]` 순서로 넣습니다. 단위는 m, rad, kg·m²입니다. 설정이 비어 있거나 관성텐서가 물리적으로 유효하지 않으면 첫 trial 전에 차단합니다. **mDPG의 `link_6` 장착 변환 실측값은 여전히 없습니다.**
 
 MuJoCo에서는 박스의 질량·관성이 토크 계산에 반영되고 반투명 박스로 보입니다. 박스의 충돌, 실제 파지력·진공 유지·이탈은 모델링하지 않았습니다. 따라서 이 수집은 **이상적인 고정 부착 시뮬레이션 데이터**이며 실제 작업물을 집어 올리는 실험이나 안전한 실로봇 경로 검증으로 해석할 수 없습니다. mDPG 자체의 0.62 kg 박스 관성과 장착/TCP 역시 아직 검증되지 않았습니다.
 
@@ -128,11 +128,14 @@ MuJoCo에서는 박스의 질량·관성이 토크 계산에 반영되고 반투
 # 저장소 루트에서 계획 294건 생성. 데이터 수집은 시작하지 않음.
 ./scripts/play_7_condition_dataset.ps1
 
-# 실측 mDPG mount가 준비된 후에만 실행.
+# 기존 영상과 같은 CAD 빨간 장착면 중심을 link_6 원점에 둔 시뮬레이션 가정으로 실행.
+./scripts/play_7_condition_dataset.ps1 -Play -UseCadFaceCenterFixture
+
+# 실측 장착 변환이 생긴 경우에는 별도로 입력해 실행.
 ./scripts/play_7_condition_dataset.ps1 -Play -MdpgMountXyz @($xM,$yM,$zM) -MdpgMountRpy @($roll,$pitch,$yaw)
 ```
 
-위의 `$xM` 등에는 미리 측정값을 대입해야 합니다. 값이 없으면 실행되지 않습니다. 현 시점에는 실측 변환값이 없어 전체 294회 캠페인을 시작할 수 없습니다.
+`-UseCadFaceCenterFixture`는 빨간 장착면 중심을 J6 끝에 일치시키는 영상/CAD 기준 `(0,0,0)` 변환을 **실측이 아닌 시뮬레이션 가정으로** 선택합니다. CAD 메시 자체의 X축 180° 회전은 모델 내부에 이미 적용돼 있으므로 장착 `rpy`에 다시 더하지 않습니다. 선택 근거와 변환값은 결과 루트의 `mount_declaration.json`에 보존되며, 각 trial metadata의 `mount_verified`는 false입니다. 실측 변환을 넣어 재실행하면 기존 결과의 변환과 비교해 달라진 조건을 완료된 trial로 건너뛰지 않습니다. 실로봇 장착·TCP·공압 IO 검증에는 사용할 수 없습니다.
 
 ### Dynamics10: 신규 관절 여기 T5~T14
 
