@@ -39,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--payload-mass", type=float, default=0.0)
     parser.add_argument("--sim-domain-id", type=int, default=173)
     parser.add_argument("--connect-existing", action="store_true", help="connect to existing MuJoCo in the isolated domain")
+    parser.add_argument("--record-video", action="store_true", help="save an MP4 of the MuJoCo display")
     return parser
 
 
@@ -49,6 +50,8 @@ def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None
         parser.error("--trajectory all is only supported in preview or simulation")
     if args.connect_existing and not args.simulation:
         parser.error("--connect-existing requires --simulation")
+    if args.record_video and not args.simulation:
+        parser.error("--record-video requires --simulation")
     if args.payload_mass < 0 or not math.isfinite(args.payload_mass):
         parser.error("--payload-mass must be finite and nonnegative")
     if args.duration <= 0 or args.connection_timeout <= 0:
@@ -99,7 +102,8 @@ def main(argv: list[str] | None = None) -> int:
                 from .simulation_executor import execute
                 folder = execute(config, args.results_dir, args.gripper_type, args.payload_mass,
                                  args.sim_domain_id, args.connect_existing, args.connection_timeout,
-                                 reference_explicit=args.reference_tcp_mm is not None)
+                                 reference_explicit=args.reference_tcp_mm is not None,
+                                 record_video=args.record_video)
             else:
                 from .real_executor import execute
                 folder, blocked = execute(config, args.results_dir, args.gripper_type, args.payload_mass,

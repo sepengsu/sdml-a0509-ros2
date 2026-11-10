@@ -102,7 +102,7 @@ def save_metadata(folder: Path, plan: TrajectoryPlan, mode: str, trial_id: str,
         "units": {"q": "rad", "dq": "rad/s", "ddq": "rad/s^2", "target_q": "rad",
                   "tcp_position": "mm", "torque": "Nm", "timestamp": "UTC Unix seconds",
                   "ros_time_s": "ROS clock seconds"},
-        "time_sync": "Each ROS topic callback records arrival ROS time; RT topics have no header and are matched by arrival time.",
+        "time_sync": "ROS node time is stored as ros_time_s. Topic freshness and RT joins use local monotonic arrival time; RT topics have no header.",
         "filtering": "none", "missing_data": "Blank CSV cells mean unavailable or stale measurements.",
         "safety": "Trajectory dimensions are unvalidated research examples and are never sufficient for real motion approval.",
     }

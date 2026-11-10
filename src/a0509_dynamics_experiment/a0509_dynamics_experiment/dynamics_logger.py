@@ -47,19 +47,22 @@ class DynamicsRecorder:
         self.joint: dict[str, Any] | None = None
         self.rt: dict[str, tuple[float, tuple[float, ...]]] = {}
         self.topic_arrivals: dict[str, list[float]] = defaultdict(list)
+        self.topic_source_times: dict[str, list[float]] = defaultdict(list)
         self.rows: list[dict[str, Any]] = []
         self._previous_real_dq: tuple[float, ...] | None = None
         self._previous_real_time: float | None = None
 
     def ingest_joint_state(self, names: Sequence[str], position: Sequence[float],
                            velocity: Sequence[float] | None = None, effort: Sequence[float] | None = None,
-                           arrival_s: float | None = None) -> None:
+                           arrival_s: float | None = None, source_time_s: float | None = None) -> None:
         now = time.monotonic() if arrival_s is None else arrival_s
         q = ordered(position, names)
         dq = ordered(velocity, names) if velocity and len(velocity) == len(names) else None
         tau = ordered(effort, names) if effort and len(effort) == len(names) else None
         self.joint = {"arrival": now, "q": q, "dq": dq, "effort": tau}
         self.topic_arrivals["joint_states"].append(now)
+        if source_time_s is not None and math.isfinite(source_time_s) and source_time_s > 0:
+            self.topic_source_times["joint_states"].append(source_time_s)
 
     def ingest_rt(self, key: str, values: Sequence[float], arrival_s: float | None = None) -> None:
         if key not in RT_FIELDS:
@@ -119,15 +122,26 @@ class DynamicsRecorder:
         return row
 
     def quality(self) -> dict[str, Any]:
-        result: dict[str, Any] = {}
-        for key, stamps in self.topic_arrivals.items():
+        def metrics(stamps: list[float]) -> dict[str, Any]:
             gaps = [b - a for a, b in zip(stamps, stamps[1:]) if b > a]
             duration = stamps[-1] - stamps[0] if len(stamps) > 1 else 0.0
             expected = max(1, round(duration * self.sample_hz) + 1)
-            result[key] = {"received": len(stamps), "observed_hz": (len(stamps) - 1) / duration if duration else None,
-                           "gap_estimated_missing": sum(max(0, round(g * self.sample_hz) - 1) for g in gaps),
-                           "estimated_missing_rate": max(0, expected - len(stamps)) / expected,
-                           "max_gap_s": max(gaps) if gaps else None}
+            return {"received": len(stamps),
+                    "observed_hz": (len(stamps) - 1) / duration if duration > 0 else None,
+                    "gap_estimated_missing": sum(max(0, round(g * self.sample_hz) - 1) for g in gaps),
+                    "estimated_missing_rate": max(0, expected - len(stamps)) / expected,
+                    "max_gap_s": max(gaps) if gaps else None}
+
+        result: dict[str, Any] = {}
+        for key, stamps in self.topic_arrivals.items():
+            wall = metrics(stamps)
+            source = self.topic_source_times.get(key, [])
+            if self.mode == "simulation" and len(source) > 1:
+                result[key] = {**metrics(source), "time_basis": "message_header_sim_time",
+                               "wall_arrival_hz": wall["observed_hz"],
+                               "wall_arrival_max_gap_s": wall["max_gap_s"]}
+            else:
+                result[key] = {**wall, "time_basis": "arrival_wall_time"}
         result["rows_written"] = len(self.rows)
         result["blank_field_counts"] = {
             key: sum(row.get(key) is None for row in self.rows)

@@ -14,6 +14,7 @@ setup(
         ("share/" + package_name + "/launch", glob("launch/*.launch.py")),
     ],
     install_requires=["setuptools", "matplotlib>=3.5", "numpy>=1.21", "PyYAML>=6.0", "mujoco>=3.0"],
+    extras_require={"video": ["mss>=10.0", "imageio-ffmpeg>=0.5"]},
     zip_safe=True,
     maintainer="SDML",
     maintainer_email="na06219@naver.com",

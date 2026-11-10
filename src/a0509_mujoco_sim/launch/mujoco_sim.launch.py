@@ -63,13 +63,13 @@ def generate_launch_description():
     )
 
     # Joint state broadcaster (no namespace)
-    # mujoco_ros2_control creates controller manager node named "mujoco_controller_manager"
+    # The pinned mujoco_ros2_control creates /controller_manager.
     joint_state_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',
         arguments=[
             'joint_state_broadcaster',
-            '-c', 'mujoco_controller_manager',
+            '-c', '/controller_manager',
         ],
         output='screen',
     )
@@ -80,7 +80,7 @@ def generate_launch_description():
         executable='spawner',
         arguments=[
             'dsr_position_controller',
-            '-c', 'mujoco_controller_manager',
+            '-c', '/controller_manager',
         ],
         output='screen',
     )

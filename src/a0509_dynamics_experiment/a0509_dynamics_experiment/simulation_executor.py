@@ -207,7 +207,7 @@ def _prepare_cartesian_home(node, publisher, latest, launch, sample_hz: int, obs
 
 def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass: float,
             sim_domain_id: int, connect_existing: bool, launch_timeout_s: float = 60.0,
-            reference_explicit: bool = False) -> Path:
+            reference_explicit: bool = False, record_video: bool = False) -> Path:
     if not 0 <= sim_domain_id <= 232:
         raise ValueError("ROS_DOMAIN_ID must be 0..232")
     if "rclpy" in __import__("sys").modules and os.environ.get("ROS_DOMAIN_ID") != str(sim_domain_id):
@@ -221,6 +221,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
 
     launch = None
     bag = None
+    video = None
     node = None
     rclpy.init()
     try:
@@ -239,7 +240,8 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                 latest["effort"] = ordered(message.effort, message.name) if len(message.effort) == len(message.name) else None
                 latest["arrival"] = time.monotonic()
                 recorder.ingest_joint_state(message.name, message.position, message.velocity, message.effort,
-                                            arrival_s=latest["arrival"])
+                                            arrival_s=latest["arrival"],
+                                            source_time_s=message.header.stamp.sec + message.header.stamp.nanosec / 1e9)
             except ValueError:
                 pass
 
@@ -259,7 +261,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
         names = {name for name, _namespace in node.get_node_names_and_namespaces()}
         if "dsr_controller2" in names or "run_emulator" in names:
             raise RuntimeError("real/virtual Doosan controller detected in the simulation ROS domain; commands blocked")
-        if "mujoco_controller_manager" not in names:
+        if "controller_manager" not in names:
             raise RuntimeError("expected MuJoCo controller manager missing; commands blocked")
         controller_deadline = time.monotonic() + 15.0
         while publisher.get_subscription_count() == 0 and time.monotonic() < controller_deadline:
@@ -298,17 +300,38 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                      sorted({0, len(targets) // 4, len(targets) // 2, 3 * len(targets) // 4, len(targets) - 1})]
         save_trajectory_plot(plan, folder, robot_links_mm=observer.links_mm(start_q),
                              robot_snapshots_mm=snapshots)
+        if record_video:
+            from .video_recorder import SimulationVideoRecorder
+            video = SimulationVideoRecorder(folder / "simulation.mp4")
+            video.start()
         bag_path = folder / "rosbag"
         bag = subprocess.Popen(["ros2", "bag", "record", "-o", str(bag_path), "/clock", "/joint_states",
                                 "/dsr_position_controller/commands", "/a0509_dynamics_experiment/trajectory_markers"],
                                env=os.environ.copy())
-        rclpy.spin_once(node, timeout_sec=0.25)
-        if bag.poll() is not None:
-            raise RuntimeError(f"ros2 bag record exited early with code {bag.returncode}")
+        ready_deadline = time.monotonic() + 10.0
+        while time.monotonic() < ready_deadline:
+            rclpy.spin_once(node, timeout_sec=0.05)
+            if bag.poll() is not None:
+                raise RuntimeError(f"ros2 bag record exited early with code {bag.returncode}")
+            if bag_path.is_dir() and latest["arrival"] is not None and time.monotonic() - latest["arrival"] < 0.1:
+                break
+        else:
+            raise RuntimeError("ROS 2 Bag or fresh joint feedback did not become ready")
         marker_publisher = _markers(node, plan)
         measured = []
         previous_dq = None
         previous_at = None
+
+        def wait_for_fresh_feedback() -> None:
+            fresh_deadline = time.monotonic() + 2.0
+            while latest["arrival"] is None or time.monotonic() - latest["arrival"] > 0.2:
+                if time.monotonic() > fresh_deadline:
+                    raise RuntimeError("Simulation joint feedback stale; commands stopped")
+                if launch is not None and launch.poll() is not None:
+                    raise RuntimeError("MuJoCo process exited while waiting for joint feedback")
+                rclpy.spin_once(node, timeout_sec=0.01)
+
+        wait_for_fresh_feedback()
         start_ros = node.get_clock().now().nanoseconds / 1e9
         for point, target in zip(plan.points, targets):
             wait_deadline = time.monotonic() + 30.0
@@ -318,8 +341,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                 if launch is not None and launch.poll() is not None:
                     raise RuntimeError("MuJoCo process exited during execution")
                 rclpy.spin_once(node, timeout_sec=0.005)
-            if latest["arrival"] is None or time.monotonic() - latest["arrival"] > 0.2:
-                raise RuntimeError("Simulation joint feedback stale; commands stopped")
+            wait_for_fresh_feedback()
             message = Float64MultiArray()
             message.data = list(target)
             publisher.publish(message)
@@ -352,8 +374,11 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                              measured_joint_rad=measured_joint, measured_time_s=measured_times,
                              robot_links_mm=observer.links_mm(start_q), robot_snapshots_mm=snapshots)
         save_dynamics_plot(recorder.rows, folder)
+        video_info = video.stop() if video is not None else None
+        video = None
         save_metadata(folder, plan, "simulation", trial_id, {
             "quality": recorder.quality(), "ros_domain_id": sim_domain_id,
+            "time_sync": "JointState header and ros_time_s use MuJoCo simulation time; callback arrival time is used for freshness. Bag storage timestamps use wall time.",
             "gripper_type": gripper_type, "payload_mass_kg": payload_mass,
             "rosbag": str(bag_path), "sim_model": "dsr_description2/mujoco_models/a0509/scene.xml",
             "physics_source": "Separate MuJoCo model reconstructed from measured q/dq/ddq; qfrc_actuator unavailable from upstream bridge",
@@ -361,9 +386,13 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             "sim_initialization": "Cartesian trials first move the simulator to (-0.5, -0.5, 1.6, 0, -0.6, 0) rad; this setup move is outside the recorded trajectory",
             "torque_definitions": TORQUE_DEFINITIONS,
             "validation": "IK position/orientation convergence and conservative joint limits; no physical robot involved",
+            "video": video_info,
         })
         return folder
     finally:
+        if video is not None:
+            try: video.stop()
+            except RuntimeError: pass
         if bag is not None and bag.poll() is None:
             bag.send_signal(signal.SIGINT)
             try: bag.wait(timeout=10)

@@ -11,7 +11,7 @@ from a0509_dynamics_experiment.dynamics_logger import DynamicsRecorder
 from a0509_dynamics_experiment.real_executor import validate_real_execution
 from a0509_dynamics_experiment.run_experiment import main
 from a0509_dynamics_experiment.simulation_executor import MujocoObserver
-from a0509_dynamics_experiment.trajectory_generator import TrajectoryConfig, generate
+from a0509_dynamics_experiment.trajectory_generator import JOINT_NAMES, TrajectoryConfig, generate
 from a0509_dynamics_experiment.urdf_kinematics import A0509Urdf, find_a0509_urdf
 
 
@@ -71,6 +71,19 @@ def test_real_rt_conversion_and_staleness():
     assert recorder.quality()["blank_field_counts"]["q1"] == 1
 
 
+def test_simulation_quality_uses_simulation_clock():
+    recorder = DynamicsRecorder("simulation", "T1", "trial_001", "none", 0.0)
+    for index in range(101):
+        recorder.ingest_joint_state(JOINT_NAMES, [0.0] * 6,
+                                    arrival_s=1.0 + index / 75,
+                                    source_time_s=1.0 + index / 100)
+    quality = recorder.quality()["joint_states"]
+    assert quality["time_basis"] == "message_header_sim_time"
+    assert quality["observed_hz"] == pytest.approx(100)
+    assert quality["wall_arrival_hz"] == pytest.approx(75)
+    assert quality["estimated_missing_rate"] == 0
+
+
 def test_real_motion_fail_closed_and_no_motion_interface():
     reasons = validate_real_execution(TrajectoryConfig("T1"), {})
     assert any("collision" in reason for reason in reasons)
@@ -86,6 +99,8 @@ def test_unsafe_mode_combinations_are_rejected():
         main(["--preview", "--execute", "--trajectory", "T1"])
     with pytest.raises(SystemExit):
         main(["--preview", "--simulation", "--trajectory", "T1"])
+    with pytest.raises(SystemExit):
+        main(["--preview", "--record-video", "--trajectory", "T1"])
     with pytest.raises(SystemExit):
         main(["--trajectory", "all"])
 
