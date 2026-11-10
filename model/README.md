@@ -1,6 +1,10 @@
 # A0509 + AG145 Physics-Informed KAN
 
-`model/`은 기존 `results/ag145/simulation/`의 **MuJoCo 데이터만** 읽는 독립적인 오프라인 연구 코드입니다. ROS 2 노드를 시작하거나 실제 로봇에 명령을 보내지 않습니다. 이 모델은 실로봇 동역학을 식별한 결과가 아니라, 현재 A0509 + 고정 AG145 MuJoCo 모델의 **역동역학 대리 모델**입니다.
+`model/`은 MuJoCo 결과를 읽는 독립적인 오프라인 연구 코드입니다. ROS 2 노드를 시작하거나 실제 로봇에 명령을 보내지 않습니다. 현재 학습된 PKAN은 `results/ag145/simulation/`의 데이터를 사용한 A0509 + 고정 AG145 MuJoCo **역동역학 대리 모델**이며 실로봇 동역학을 식별한 결과가 아닙니다.
+
+## Tool Aware 궤적 비교
+
+`python -m model.analyze_tool_aware`는 기록된 T1~T14의 같은 관절 상태를 bare A0509, AG145, mDPG MuJoCo 모델에 재적용해 정적 하중·동적 토크·질량행렬 차이를 계산합니다. mDPG의 실제 시뮬레이션 기록은 T1 한 trial이며, 나머지는 반사실 계산입니다. 원본 trial마다 다른 가속도 추정법을 썼으므로 공통 시뮬레이션 시각 5점 기울기를 다시 적용합니다. 결과와 해석은 [Tool Aware 분석](tool_aware_analysis/README.md)에 있습니다. 이는 새로운 PKAN 학습이나 실로봇 검증 결과가 아닙니다.
 
 ## 모델
 
