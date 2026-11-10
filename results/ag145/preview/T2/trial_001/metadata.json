@@ -80,6 +80,7 @@
       0.0,
       200.0
     ],
-    "tcp_calibrated": false
+    "tcp_calibrated": false,
+    "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion"
   }
 }

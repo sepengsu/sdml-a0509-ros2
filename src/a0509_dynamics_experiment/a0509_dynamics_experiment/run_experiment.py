@@ -119,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
                             "configuration": "fixed open pose", "mass_kg": AG145_MASS_KG,
                             "inertia": "uncalibrated box approximation",
                             "collision": "approximate bounding boxes",
+                            "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion",
                             "tcp_site": "ag145_tcp", "tcp_offset_mm": list(AG145_TCP_OFFSET_MM),
                             "tcp_calibrated": False,
                         },

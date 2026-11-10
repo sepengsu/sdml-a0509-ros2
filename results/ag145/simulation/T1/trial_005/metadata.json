@@ -1,15 +1,15 @@
 {
   "schema_version": "1.0",
-  "created_utc": "2026-11-10T07:05:59.158006+00:00",
+  "created_utc": "2026-11-10T07:21:42.269415+00:00",
   "trajectory_id": "T1",
-  "trial_id": "trial_004",
+  "trial_id": "trial_005",
   "mode": "simulation",
   "trajectory_config": {
     "trajectory_id": "T1",
     "reference_tcp_mm": [
-      254.07034682703429,
-      -138.46904751666528,
-      962.0505281094256
+      254.06964994080698,
+      -138.4677264608109,
+      962.0536977039569
     ],
     "start_mm": [
       0,
@@ -72,13 +72,13 @@
       "estimated_missing_rate": 0.0,
       "max_gap_s": 0.011999999000000372,
       "time_basis": "message_header_sim_time",
-      "wall_arrival_hz": 46.50134778021502,
-      "wall_arrival_max_gap_s": 0.6268886299994847
+      "wall_arrival_hz": 45.736648285383104,
+      "wall_arrival_max_gap_s": 0.6353753610001149
     },
     "rows_written": 1001,
     "blank_field_counts": {
-      "q1": 4,
-      "dq1": 4,
+      "q1": 0,
+      "dq1": 0,
       "ddq1": 1,
       "tcp_position": 0,
       "actual_motor_torque": 1001,
@@ -88,7 +88,7 @@
   "ros_domain_id": 173,
   "gripper_type": "ag145",
   "payload_mass_kg": 0.0,
-  "rosbag": "/ros2_ws/results/ag145/simulation/T1/trial_004/rosbag",
+  "rosbag": "/ros2_ws/results/ag145/simulation/T1/trial_005/rosbag",
   "rosbag_relative_path": "rosbag",
   "sim_model": "ag145_scene.xml (generated from dsr_description2 A0509 and dh_ag145_description)",
   "gripper_model": {
@@ -102,7 +102,8 @@
       0.0,
       200.0
     ],
-    "tcp_calibrated": false
+    "tcp_calibrated": false,
+    "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion"
   },
   "physics_source": "Separate MuJoCo model reconstructed from measured q/dq/ddq; qfrc_actuator unavailable from upstream bridge",
   "acceleration_method": "finite difference of observed JointState velocity; blank if velocity unavailable",
@@ -118,11 +119,11 @@
   },
   "validation": "IK position/orientation convergence and conservative joint limits; no physical robot involved",
   "video": {
-    "path": "/ros2_ws/results/ag145/simulation/T1/trial_004/simulation.mp4",
+    "path": "/ros2_ws/results/ag145/simulation/T1/trial_005/simulation.mp4",
     "relative_path": "simulation.mp4",
     "fps": 15,
-    "frames": 337,
-    "size_bytes": 238538
+    "frames": 348,
+    "size_bytes": 237963
   },
   "replay_video": {
     "relative_path": "simulation_replay.mp4",

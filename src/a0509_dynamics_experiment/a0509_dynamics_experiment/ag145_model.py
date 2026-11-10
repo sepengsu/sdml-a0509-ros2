@@ -8,6 +8,7 @@ claimed by this model.
 from __future__ import annotations
 
 from collections import defaultdict
+import math
 from pathlib import Path
 import struct
 import xml.etree.ElementTree as ET
@@ -16,6 +17,19 @@ import xml.etree.ElementTree as ET
 AG145_MASS_KG = 1.3
 AG145_TCP_OFFSET_MM = (0.0, 0.0, 200.0)
 AG145_MOUNT_RPY = (0.0, 0.0, 0.7853981634)
+
+
+def _urdf_quat(rpy: str) -> str:
+    """Convert URDF fixed-axis roll/pitch/yaw to an MJCF wxyz quaternion."""
+    roll, pitch, yaw = (float(value) / 2 for value in rpy.split())
+    cr, sr = math.cos(roll), math.sin(roll)
+    cp, sp = math.cos(pitch), math.sin(pitch)
+    cy, sy = math.cos(yaw), math.sin(yaw)
+    values = (cy * cp * cr + sy * sp * sr,
+              cy * cp * sr - sy * sp * cr,
+              cy * sp * cr + sy * cp * sr,
+              sy * cp * cr - cy * sp * sr)
+    return " ".join(f"{value:.12g}" for value in values)
 
 
 def _package_share(package: str, local_parts: tuple[str, ...]) -> Path:
@@ -156,7 +170,7 @@ def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
             children[parent.attrib["link"]].append((joint, child.attrib["link"]))
 
     mount = ET.SubElement(flange, "body", name="ag145_base_link", pos="0 0 0",
-                          euler=" ".join(str(x) for x in AG145_MOUNT_RPY))
+                          quat=_urdf_quat(" ".join(str(x) for x in AG145_MOUNT_RPY)))
     # Total gripper mass is from the manufacturer. Inertia uses a coarse box
     # envelope because the repository URDF supplies no calibrated inertials.
     ET.SubElement(mount, "inertial", pos="0 0 0.10", mass=str(AG145_MASS_KG),
@@ -196,13 +210,13 @@ def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
                 ET.SubElement(parent_body, "geom", name=f"ag145_{link_name}_visual",
                               type="mesh", mesh=mesh_name, density="0", contype="0",
                               conaffinity="0", pos=origin.attrib.get("xyz", "0 0 0") if origin is not None else "0 0 0",
-                              euler=origin.attrib.get("rpy", "0 0 0") if origin is not None else "0 0 0",
+                              quat=_urdf_quat(origin.attrib.get("rpy", "0 0 0") if origin is not None else "0 0 0"),
                               rgba=color.attrib.get("rgba", "0.4 0.4 0.4 1") if color is not None else "0.4 0.4 0.4 1")
         for joint, child_name in children[link_name]:
             origin = joint.find("origin")
             body = ET.SubElement(parent_body, "body", name=f"ag145_{child_name}",
                                  pos=origin.attrib.get("xyz", "0 0 0") if origin is not None else "0 0 0",
-                                 euler=origin.attrib.get("rpy", "0 0 0") if origin is not None else "0 0 0")
+                                 quat=_urdf_quat(origin.attrib.get("rpy", "0 0 0") if origin is not None else "0 0 0"))
             add_link(child_name, body)
 
     add_link("base_link", mount)

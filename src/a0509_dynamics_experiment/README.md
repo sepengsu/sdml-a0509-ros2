@@ -65,6 +65,8 @@ Simulation의 기본 `ROS_DOMAIN_ID`는 173이며 `--sim-domain-id`로 변경할
 
 `--gripper-type ag145`는 저장소의 `dh_ag145_description` URDF/STL을 기존 A0509 MuJoCo 모델의 `link_6`에 결합합니다. 장착 회전은 기존 `a0509_ag145.urdf.xacro`의 45°를 따릅니다. AG145는 벌린 자세로 고정되고 그리퍼 조작 명령은 없습니다. [제조사 AG-105-145 사양](https://en.dh-robotics.com/product/ag)의 1.3 kg을 모델에 더합니다. 원본 URDF에 관성 정보가 없어서 관성·충돌 형상은 대략적인 박스로 구성했습니다. `ag145_tcp`는 플랜지에서 그리퍼 로컬 Z 방향으로 200 mm 떨어진 **임시 기준점**이며 실물 TCP 측정/보정값이 아닙니다. 이 가정은 각 trial의 `metadata.json`에 기록됩니다.
 
+URDF의 고정축 `rpy`와 MuJoCo XML의 기본 Euler 회전 순서는 다릅니다. AG145 링크/시각 메시의 `rpy`를 쿼터니언으로 변환해 손가락과 링크가 분리돼 보이지 않도록 했습니다. 이전에 생성한 잘못된 화면 녹화본은 결과 목록에서 제외하고 수정된 T1 trial을 다시 기록했습니다.
+
 AG145 Preview는 MuJoCo Python 패키지가 설치된 환경에서 로컬 모델만 읽습니다. T1~T3의 기준 TCP를 생략하면 모델의 도달 가능한 초기 자세에서 AG145 TCP 좌표를 사용합니다. 시뮬레이션은 같은 TCP site에 대해 IK와 경로 충돌 검사를 수행하고 MuJoCo 데이터에 그리퍼 질량을 반영합니다. `--connect-existing`과 AG145는 함께 사용할 수 없습니다. 대형 STL을 MuJoCo 화면에서 처리하기 위해 메시를 축소합니다. Docker 이미지에는 `fast-simplification`이 포함되고, 일반 Python 환경에서는 NumPy 기반 축소가 사용됩니다.
 
 `--record-video`는 MuJoCo 화면을 `simulation.mp4`에 저장합니다. `render_ag145_replay`는 AG145 trial의 `dynamics.csv`에 저장된 MuJoCo 관절 위치를 재생하여 `simulation_replay.mp4`를 만듭니다. 두 영상 모두 시뮬레이션이며, 재생 영상은 실제 촬영물이 아닙니다. 재생 영상의 카메라 설정과 데이터 출처는 metadata에 기록됩니다. Docker 안에서는 `DISPLAY`와 X 서버가 필요합니다.

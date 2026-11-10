@@ -102,7 +102,8 @@
       0.0,
       200.0
     ],
-    "tcp_calibrated": false
+    "tcp_calibrated": false,
+    "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion"
   },
   "physics_source": "Separate MuJoCo model reconstructed from measured q/dq/ddq; qfrc_actuator unavailable from upstream bridge",
   "acceleration_method": "finite difference of observed JointState velocity; blank if velocity unavailable",
@@ -117,5 +118,6 @@
     "qfrc_bias": "MuJoCo bias generalized force [Nm for hinge DOFs]"
   },
   "validation": "IK position/orientation convergence and conservative joint limits; no physical robot involved",
-  "video": null
+  "video": null,
+  "scene_visual_revision": "Visual-only orientation corrected after acquisition; mass, TCP, collision boxes, and recorded dynamics unchanged."
 }

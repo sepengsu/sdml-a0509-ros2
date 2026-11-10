@@ -3,11 +3,12 @@ import csv
 import json
 import math
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 import pytest
 
 from a0509_dynamics_experiment.dataset_exporter import create_trial, save_dynamics, save_metadata, save_trajectory
-from a0509_dynamics_experiment.ag145_model import AG145_MASS_KG, build_ag145_scene, source_paths
+from a0509_dynamics_experiment.ag145_model import AG145_MASS_KG, _urdf_quat, build_ag145_scene, source_paths
 from a0509_dynamics_experiment.dynamics_logger import DynamicsRecorder
 from a0509_dynamics_experiment.real_executor import validate_real_execution
 from a0509_dynamics_experiment.run_experiment import main
@@ -149,6 +150,12 @@ def test_ag145_scene_has_tool_mass_visuals_and_tcp(tmp_path):
     if not arm_scene.is_file() or not gripper_urdf.is_file():
         pytest.skip("A0509 or AG145 model package not initialized")
     scene = build_ag145_scene(tmp_path / "scene.xml", arm_scene, gripper_urdf)
+    expected = (0.0, 0.0, math.sqrt(0.5), math.sqrt(0.5))
+    assert tuple(float(v) for v in _urdf_quat(f"{math.pi / 2} 0 {math.pi}").split()) == pytest.approx(expected)
+    visual = ET.parse(scene).getroot().find(".//geom[@name='ag145_left_finger_visual']")
+    assert visual is not None
+    assert visual.attrib["quat"] == _urdf_quat("1.57079 0 3.14159")
+    assert "euler" not in visual.attrib
     bare = MujocoObserver(arm_scene)
     gripper = MujocoObserver(scene)
     assert gripper.model.nq == bare.model.nq == 6

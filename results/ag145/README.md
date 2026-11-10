@@ -4,7 +4,7 @@ AG145를 벌린 고정 자세로 장착한 A0509의 시뮬레이션 결과입니
 
 | 궤적 | 유효 trial | dynamics 행 | 시뮬레이션 시각 기준 Hz | 추정 누락률 | 계획–측정 오차 중앙값 / 95백분위 |
 |---|---|---:|---:|---:|---:|
-| T1 | `simulation/T1/trial_004` | 1,001 | 99.99 | 0% | TCP 10.10 / 25.26 mm |
+| T1 | `simulation/T1/trial_005` | 1,001 | 99.99 | 0% | TCP 10.11 / 25.22 mm |
 | T2 | `simulation/T2/trial_001` | 1,001 | 99.99 | 0% | TCP 8.79 / 20.54 mm |
 | T3 | `simulation/T3/trial_001` | 3,401 | 99.99 | 0% | TCP 9.58 / 22.90 mm |
 | T4 | `simulation/T4/trial_001` | 7,401 | 99.86 | 0.134% | 관절 벡터 0.008 / 0.022 rad |
@@ -14,3 +14,5 @@ AG145를 벌린 고정 자세로 장착한 A0509의 시뮬레이션 결과입니
 각 유효 trial에는 기준 궤적 CSV/JSON, waypoint CSV, 동역학 CSV, metadata, PNG/HTML 그래프, ROS 2 Bag, AG145 MuJoCo scene 및 축소 메시가 있습니다. T1에는 `simulation.mp4`(MuJoCo 화면 녹화)와 `simulation_replay.mp4`(수집된 qpos를 근접 시점으로 렌더링)가 추가로 있습니다. `preview/T1`~`T4`는 로봇 연결 없이 만든 경로 그림입니다.
 
 모델의 AG145 질량은 1.3 kg이며 관성과 충돌 형상은 근사값입니다. AG145 TCP는 플랜지에서 200 mm 떨어진 임시 기준점입니다. 손가락 구동, 실물 TCP 보정, 실물 충돌 안전성은 검증하지 않았습니다. `qfrc_actuator`는 상위 MuJoCo ROS bridge에서 노출하지 않아 빈 값입니다. 원본 모델 및 재생 방법은 `src/a0509_dynamics_experiment/README.md`를 참조하세요.
+
+AG145 시각 메시의 URDF `rpy`를 MuJoCo 기본 Euler 순서로 잘못 해석하면 손가락이 링크에서 떨어져 보입니다. `trial_005` 영상과 현재 저장된 scene XML은 URDF 고정축 회전을 쿼터니언으로 변환한 수정본입니다. T2~T4는 시각 장면만 수정했으며 기존 기록값을 유지했습니다. 수정 전후 대표 자세에서 TCP와 역동역학 값은 부동소수점 오차 범위에서 같음을 확인했습니다.

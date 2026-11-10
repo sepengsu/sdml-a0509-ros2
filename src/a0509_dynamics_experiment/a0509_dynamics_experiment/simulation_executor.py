@@ -243,6 +243,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
         gripper_model_info = {"configuration": "fixed open pose", "mass_kg": AG145_MASS_KG,
                               "inertia": "uncalibrated box approximation",
                               "collision": "approximate bounding boxes",
+                              "visual_orientation": "URDF fixed-axis RPY converted to MJCF quaternion",
                               "tcp_site": "ag145_tcp", "tcp_offset_mm": list(AG145_TCP_OFFSET_MM),
                               "tcp_calibrated": False}
     import rclpy
