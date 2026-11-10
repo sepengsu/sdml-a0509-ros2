@@ -31,11 +31,21 @@ def predict(model: PhysicsKAN, q: list[float], dq: list[float],
         output = model(torch.tensor([q], dtype=torch.float32),
                        torch.tensor([dq], dtype=torch.float32),
                        torch.tensor([ddq], dtype=torch.float32))
+    mass = output["mass_matrix"][0]
+    dq_tensor = torch.tensor(dq, dtype=torch.float32)
+    ddq_tensor = torch.tensor(ddq, dtype=torch.float32)
+    inertia_torque = mass @ ddq_tensor
+    damping_torque = model.damping * dq_tensor
     return {"torque_nm": output["tau"][0].tolist(),
             "bias_nm": output["bias"][0].tolist(),
-            "mass_matrix_kg_m2": output["mass_matrix"][0].tolist(),
+            "mass_matrix_kg_m2": mass.tolist(),
+            "inertia_torque_nm": inertia_torque.tolist(),
+            "zero_velocity_bias_nm": output["gravity"][0].tolist(),
+            "velocity_bias_nm": output["velocity_bias"][0].tolist(),
+            "damping_torque_nm": damping_torque.tolist(),
+            "kinetic_energy_j": float(0.5 * dq_tensor @ mass @ dq_tensor),
             "damping_nm_s_rad": model.damping.tolist(),
-            "provenance": "MuJoCo AG145 surrogate, not real-robot torque measurement"}
+            "provenance": "MuJoCo AG145 surrogate; velocity_bias is not a uniquely identified Coriolis matrix; not real-robot torque"}
 
 
 def main(argv: list[str] | None = None) -> int:

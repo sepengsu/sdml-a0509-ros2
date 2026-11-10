@@ -1,0 +1,26 @@
+{
+  "T1": {
+    "held_out_rows": 40,
+    "zero_velocity_bias_rmse_nm": 0.10234488445967707,
+    "velocity_bias_rmse_nm": 0.12909537559507822,
+    "total_bias_rmse_nm": 0.05769053305227452
+  },
+  "T2": {
+    "held_out_rows": 40,
+    "zero_velocity_bias_rmse_nm": 0.33576160847627223,
+    "velocity_bias_rmse_nm": 0.24443861851475354,
+    "total_bias_rmse_nm": 0.17605829516874266
+  },
+  "T3": {
+    "held_out_rows": 136,
+    "zero_velocity_bias_rmse_nm": 0.29716326965314843,
+    "velocity_bias_rmse_nm": 0.12910627407661726,
+    "total_bias_rmse_nm": 0.3283919993899647
+  },
+  "T4": {
+    "held_out_rows": 296,
+    "zero_velocity_bias_rmse_nm": 0.25536805337516955,
+    "velocity_bias_rmse_nm": 0.08333977781487907,
+    "total_bias_rmse_nm": 0.2636198290655819
+  }
+}

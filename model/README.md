@@ -18,6 +18,35 @@ tau(q, dq, ddq) = M_KAN(q) @ ddq + b_KAN(q, dq) + D @ dq
 
 이는 가속도에 대한 토크의 선형성과 관성행렬의 양의 정부호를 구조로 보장합니다. `b_KAN`의 속도 의존성은 학습하므로 완전한 Euler–Lagrange/Christoffel 제약 모델은 아닙니다.
 
+## 학습한 동역학 꺼내기
+
+최종 체크포인트 `model/runs/ag145_pkan/final.pt`는 수치적 **역동역학 함수**입니다. 입력 `q`(rad), `dq`(rad/s), `ddq`(rad/s²)에 대해 다음 항과 합산 토크를 계산합니다.
+
+```text
+tau = M(q) @ ddq + g0(q) + v(q,dq) + D @ dq
+g0(q) = b(q,0),  v(q,0) = 0
+```
+
+`M(q)`는 6×6 일반화 관성행렬(kg·m²)이고, 나머지 네 토크 항은 관절별 Nm입니다. `g0`는 정지 상태의 바이어스로, 학습 시 중력 단독 라벨로 감독하지 않았습니다. `v`는 속도에 따른 바이어스 **벡터**이며 유일한 코리올리 행렬 `C(q,dq)`를 식별한 결과가 아닙니다. `D`는 MuJoCo 장면에서 읽은 고정 감쇠입니다. 링크별 질량, 질량중심, 관성텐서를 PKAN 가중치에서 직접 역산할 수는 없습니다.
+
+저장소 루트의 PowerShell에서 아래 명령으로 한 관절 상태를 JSON으로 조회하거나, 기록된 네 궤적 전체의 수치 동역학을 CSV와 PNG로 추출할 수 있습니다. 모든 명령은 오프라인으로 동작합니다.
+
+```powershell
+# 한 자세: M(q), 네 토크 항, 합산 토크, 운동에너지
+model/.venv/Scripts/python.exe -m model.predict --q -0.5 -0.5 1.6 0 -0.6 0 --dq 0 0 0 0 0 0 --ddq 0 0 0 0 0 0
+
+# T1~T4, 기본 5행 간격(원본 100 Hz 중 20 Hz); --stride 1은 모든 유효 행
+model/.venv/Scripts/python.exe -m model.export_dynamics --trajectory all
+model/.venv/Scripts/python.exe -m model.plot_dynamics
+
+# MuJoCo 정지/속도 바이어스와 같은 trial의 마지막 20%에서 따로 비교
+model/.venv/Scripts/python.exe -m model.validate_decomposition
+```
+
+출력은 `model/exports/ag145_pkan/`에 저장됩니다. `{T1..T4}_dynamics.csv`에는 입력 관절 상태, `M_11`~`M_66`, `zero_velocity_bias`, `velocity_bias`, `inertia_torque`, `damping_torque`, 합산 예측 토크, MuJoCo 토크와 오차가 있습니다. `manifest.json`에는 단위, 원본 trial, 체크포인트 SHA-256, 샘플 간격, 전체 기록 행에 대한 오차를 저장합니다. 이 전체 기록 오차에는 학습 행도 포함되므로 아래 시간 구간 검증 수치와 구별해야 합니다. `figures/`에는 각 궤적의 관성행렬과 토크 분해 그래프가 있습니다.
+
+정지 바이어스 `g0(q)`를 MuJoCo에서 **해당 자세의 속도를 0으로 놓고 새로 계산한** `qfrc_bias(q,0)`와 비교한 시간 구간 검증 RMSE는 T1~T4 순서로 0.102, 0.336, 0.297, 0.255 Nm입니다. 속도 바이어스도 `qfrc_bias(q,dq)-qfrc_bias(q,0)`와 비교했으며 상세 결과는 `decomposition_validation.json`에 있습니다. 이는 같은 시뮬레이터 내부 분해와의 일치도이지 실로봇 검증이 아닙니다.
+
 ## 데이터와 검증 분할
 
 | Task | 원본 trial | 100 Hz 원본 행 | 5행 간격 유효 샘플 | 학습 / 시간 구간 검증 |

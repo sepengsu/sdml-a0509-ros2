@@ -1,0 +1,61 @@
+{
+  "created_utc": "2026-11-10T08:01:21.729480+00:00",
+  "checkpoint": "final.pt",
+  "checkpoint_sha256": "208033ac655e47a0e61ca9c79e82308693769c7b46a74b37d059a009ae2dec41",
+  "stride": 5,
+  "formula": "tau = M(q) ddq + zero_velocity_bias(q) + velocity_bias(q,dq) + D dq",
+  "joint_order": [
+    "joint_1",
+    "joint_2",
+    "joint_3",
+    "joint_4",
+    "joint_5",
+    "joint_6"
+  ],
+  "units": {
+    "q": "rad",
+    "dq": "rad/s",
+    "ddq": "rad/s^2",
+    "M": "kg m^2",
+    "torque_terms": "Nm",
+    "ros_time_s": "simulation seconds"
+  },
+  "interpretation": {
+    "zero_velocity_bias": "b(q,0); gravity-like, not separately supervised as gravity",
+    "velocity_bias": "b(q,dq)-b(q,0); not an identified Coriolis matrix",
+    "inertia_torque": "M(q)ddq",
+    "damping_torque": "fixed D dq from the MuJoCo arm model",
+    "M": "configuration-dependent generalized inertia, not individual link inertial parameters"
+  },
+  "scope": "MuJoCo A0509 with fixed-open AG145; no real-robot validation or payload variation",
+  "trials": {
+    "T1": {
+      "source_trial": "trial_005",
+      "rows": 200,
+      "csv": "T1_dynamics.csv",
+      "torque_rmse_nm": 0.10289941189507591,
+      "minimum_M_eigenvalue": 0.006784024439655175
+    },
+    "T2": {
+      "source_trial": "trial_001",
+      "rows": 200,
+      "csv": "T2_dynamics.csv",
+      "torque_rmse_nm": 0.15552957026443534,
+      "minimum_M_eigenvalue": 0.00677715220886169
+    },
+    "T3": {
+      "source_trial": "trial_001",
+      "rows": 680,
+      "csv": "T3_dynamics.csv",
+      "torque_rmse_nm": 0.2993940334321691,
+      "minimum_M_eigenvalue": 0.00658070134851417
+    },
+    "T4": {
+      "source_trial": "trial_001",
+      "rows": 1480,
+      "csv": "T4_dynamics.csv",
+      "torque_rmse_nm": 0.1934525088189562,
+      "minimum_M_eigenvalue": 0.005728937018291977
+    }
+  }
+}

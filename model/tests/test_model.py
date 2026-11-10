@@ -1,4 +1,5 @@
 import math
+import csv
 from pathlib import Path
 import tempfile
 import unittest
@@ -7,6 +8,7 @@ import numpy as np
 import torch
 
 from model.data import load_trials, time_split
+from model.export_dynamics import export
 from model.physics_check import check
 from model.pkan import PhysicsKAN, SplineKANLayer
 from model.predict import load_model, predict
@@ -59,6 +61,23 @@ class ModelTests(unittest.TestCase):
         result = predict(model, [-0.5, -0.5, 1.6, 0, -0.6, 0], [0] * 6, [0] * 6)
         self.assertEqual(len(result["torque_nm"]), 6)
         self.assertTrue(all(math.isfinite(value) for value in result["torque_nm"]))
+        self.assertTrue(np.allclose(result["torque_nm"], result["zero_velocity_bias_nm"], atol=1e-5))
+        self.assertEqual(result["kinetic_energy_j"], 0)
+
+    def test_exported_dynamics_terms_reconstruct_torque(self):
+        with tempfile.TemporaryDirectory(dir=MODEL_DIR / "runs") as folder:
+            report = export(MODEL_DIR / "runs" / "ag145_pkan" / "final.pt",
+                            folder, trajectory="T1")
+            self.assertEqual(report["trials"]["T1"]["rows"], 200)
+            with (Path(folder) / "T1_dynamics.csv").open(newline="", encoding="utf-8") as stream:
+                row = next(csv.DictReader(stream))
+            mass = np.asarray([[float(row[f"M_{i}{j}_kg_m2"]) for j in range(1, 7)]
+                               for i in range(1, 7)])
+            self.assertGreater(np.linalg.eigvalsh(mass).min(), 0)
+            for joint in range(1, 7):
+                reconstructed = sum(float(row[f"{term}_{joint}_nm"]) for term in (
+                    "zero_velocity_bias", "velocity_bias", "inertia_torque", "damping_torque"))
+                self.assertAlmostEqual(reconstructed, float(row[f"tau_pred_{joint}_nm"]), places=4)
 
     def test_one_epoch_sequential_training_writes_checkpoints(self):
         with tempfile.TemporaryDirectory(dir=MODEL_DIR / "runs") as folder:

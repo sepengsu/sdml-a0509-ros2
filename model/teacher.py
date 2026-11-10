@@ -13,18 +13,24 @@ import numpy as np
 from .data import JOINTS, REPO_ROOT, TRIAL_IDS, load_trials
 
 
+def load_scene_model(scene: Path):
+    import mujoco
+
+    scene_text = scene.read_text(encoding="utf-8")
+    # Trial XMLs were generated in /ros2_ws. Resolve those asset paths against
+    # this checkout when preprocessing on Windows or another host.
+    if not Path("/ros2_ws").exists():
+        scene_text = scene_text.replace("/ros2_ws/", REPO_ROOT.as_posix().rstrip("/") + "/")
+    return mujoco.MjModel.from_xml_string(scene_text)
+
+
 def build_teacher(output: str | Path, stride: int = 5) -> Path:
     import mujoco
 
     output = Path(output)
     trials = load_trials(stride=stride)
     scene = trials["T1"].folder / "ag145_scene.xml"
-    scene_text = scene.read_text(encoding="utf-8")
-    # Trial XMLs were generated in /ros2_ws. Resolve those asset paths against
-    # this checkout when preprocessing on Windows or another host.
-    if not Path("/ros2_ws").exists():
-        scene_text = scene_text.replace("/ros2_ws/", REPO_ROOT.as_posix().rstrip("/") + "/")
-    model = mujoco.MjModel.from_xml_string(scene_text)
+    model = load_scene_model(scene)
     if model.nq != JOINTS or model.nv != JOINTS:
         raise ValueError("expected a six-axis MuJoCo scene")
     qpos_addresses = []
