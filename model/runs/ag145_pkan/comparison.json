@@ -1,0 +1,22 @@
+{
+  "T1": {
+    "replay_ewc_rmse_nm": 0.061446044594049454,
+    "no_continual_rmse_nm": 13.196966171264648,
+    "fixed_T1_baseline_rmse_nm": 2.3579587077596478
+  },
+  "T2": {
+    "replay_ewc_rmse_nm": 0.178930401802063,
+    "no_continual_rmse_nm": 13.006429672241211,
+    "fixed_T1_baseline_rmse_nm": 2.671400761850631
+  },
+  "T3": {
+    "replay_ewc_rmse_nm": 0.3316863477230072,
+    "no_continual_rmse_nm": 12.91836929321289,
+    "fixed_T1_baseline_rmse_nm": 2.140075183694948
+  },
+  "T4": {
+    "replay_ewc_rmse_nm": 0.2636210024356842,
+    "no_continual_rmse_nm": 0.387877881526947,
+    "fixed_T1_baseline_rmse_nm": 9.234618663451744
+  }
+}

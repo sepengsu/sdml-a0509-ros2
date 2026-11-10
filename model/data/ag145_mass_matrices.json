@@ -1,0 +1,31 @@
+{
+  "created_utc": "2026-11-10T07:50:14.945499+00:00",
+  "purpose": "MuJoCo mass-matrix teacher for an offline inverse-dynamics surrogate",
+  "mujoco_version": "3.2.7",
+  "stride": 5,
+  "source_scene": "results/ag145/simulation/T1/trial_005/ag145_scene.xml",
+  "scene_sha256": "c0c9095348c2606415272aece418b5df573d88144fa058302fa3eefdb0d76fca",
+  "trials": {
+    "T1": {
+      "trial_id": "trial_005",
+      "samples": 200,
+      "dynamics_csv_sha256": "849441d71ad2114723c139d7d1a1b408c142dfaa9ba0030bf584bc754de4bfae"
+    },
+    "T2": {
+      "trial_id": "trial_001",
+      "samples": 200,
+      "dynamics_csv_sha256": "3fb093733de52a070b1e5ecc549039e6d78886e8149c0fdbdd5a8cb515b02dca"
+    },
+    "T3": {
+      "trial_id": "trial_001",
+      "samples": 680,
+      "dynamics_csv_sha256": "950e1ca2f43e53a512ee2803fbb78cd4cb7fe685d3e57bbaa12dfe34db9999d9"
+    },
+    "T4": {
+      "trial_id": "trial_001",
+      "samples": 1480,
+      "dynamics_csv_sha256": "55cfb3fc5043aaadcda3a67038ee534988da467570a18454338b29e4e2e10b2b"
+    }
+  },
+  "artifact": "ag145_mass_matrices.npz"
+}
