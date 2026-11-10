@@ -55,6 +55,22 @@ if (-not $Play) {
     Write-Host 'Dry run only. Use -UseCadFaceCenterFixture for the unmeasured video/CAD alignment or supply a measured mDPG mount with -Play.'
     return
 }
+$campaignMutex = [System.Threading.Mutex]::new($false, 'Local\A0509_sim_collection')
+try {
+    $hasLock = $campaignMutex.WaitOne(0)
+} catch [System.Threading.AbandonedMutexException] {
+    $hasLock = $true
+}
+if (-not $hasLock) {
+    $campaignMutex.Dispose()
+    throw "Another collector is preparing or running $ResultsName."
+}
+try {
+$parallelWorkers = @(& docker ps --filter 'label=a0509.collect.run' --format '{{.Names}}')
+if ($LASTEXITCODE -ne 0) { throw 'Docker daemon is unavailable.' }
+if ($parallelWorkers.Count -gt 0) {
+    throw "Parallel collection is active ($($parallelWorkers -join ', ')). Do not run sequential collection concurrently."
+}
 
 if ($UseCadFaceCenterFixture) {
     if ($PSBoundParameters.ContainsKey('MdpgMountXyz') -or $PSBoundParameters.ContainsKey('MdpgMountRpy')) {
@@ -170,3 +186,7 @@ foreach ($job in $jobs) {
     if ($LASTEXITCODE -ne 0) { throw "Trial failed: $($job.TrialId). Correct the cause, then rerun this script to resume." }
 }
 Write-Host "Completed all $($jobs.Count) planned simulation trials under $resultsRoot"
+} finally {
+    $campaignMutex.ReleaseMutex()
+    $campaignMutex.Dispose()
+}

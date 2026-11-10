@@ -86,6 +86,19 @@ if (-not $Play) {
     return
 }
 
+# Serialize launch with the sequential collector across PowerShell windows.
+$launchMutex = [System.Threading.Mutex]::new($false, 'Local\A0509_sim_collection')
+try {
+    $hasLock = $launchMutex.WaitOne(0)
+} catch [System.Threading.AbandonedMutexException] {
+    $hasLock = $true
+}
+if (-not $hasLock) {
+    $launchMutex.Dispose()
+    throw 'Another A0509 collector is preparing or running. Wait for it to finish.'
+}
+try {
+
 if ($UseCadFaceCenterFixture) {
     if ($PSBoundParameters.ContainsKey('MdpgMountXyz') -or $PSBoundParameters.ContainsKey('MdpgMountRpy')) {
         throw 'Choose either -UseCadFaceCenterFixture or explicit mDPG mount arrays.'
@@ -134,7 +147,7 @@ if (Test-Path -LiteralPath $existingDeclaration) {
     }
 }
 
-$runningWorkers = @(& docker ps --filter "label=a0509.collect.results=$ResultsName" --format '{{.Names}}')
+$runningWorkers = @(& docker ps --filter 'label=a0509.collect.run' --format '{{.Names}}')
 if ($LASTEXITCODE -ne 0) { throw 'Docker daemon is unavailable.' }
 if ($runningWorkers.Count -gt 0) { throw "Parallel workers already running: $($runningWorkers -join ', ')" }
 $baseInspectText = & docker inspect $BaseContainer
@@ -219,3 +232,7 @@ foreach ($index in 0..($RobotCount - 1)) {
 }
 Write-Host "Detached collection started. Progress: .\scripts\play_7_condition_dataset_parallel.ps1 -Status -ResultsName $ResultsName"
 Write-Host "Worker logs: $runRoot"
+} finally {
+    $launchMutex.ReleaseMutex()
+    $launchMutex.Dispose()
+}
