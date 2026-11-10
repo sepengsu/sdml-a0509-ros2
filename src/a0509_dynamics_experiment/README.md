@@ -12,6 +12,7 @@ source /opt/ros/humble/setup.bash
 # mujoco_ros2_control 빌드에 MuJoCo C++ 배포판과 MUJOCO_DIR 설정 필요
 # Python 실행 환경에 mujoco, matplotlib, numpy, PyYAML 설치 필요
 # --record-video 사용 시 mss, imageio-ffmpeg도 필요
+# render_mdpg_replay 사용 시 imageio-ffmpeg, Pillow도 필요
 colcon build --packages-up-to a0509_dynamics_experiment
 source install/setup.bash
 ```
@@ -87,6 +88,19 @@ ros2 run a0509_dynamics_experiment run_experiment --preview --trajectory T1 --gr
 ```
 
 실로봇의 `a0509_real.launch.py gripper_type:=mdpg_1s1`은 AG145 구동/피킹 노드 없이 RT 상태 발행과 RViz를 사용합니다. 실제 접속은 검증하지 않았습니다. `run_experiment --simulation --gripper-type mdpg_1s1`의 **동역학 기록**과 `--execute`는 물리 파라미터·공압 IO·장착/안전 검증이 없어서 차단합니다.
+
+장착 위치가 미측정인 상태에서 **영상만** 필요하면, T1을 그리퍼 없이 MuJoCo에서 실행한 관절 기록에 mDPG 시각 메시를 덧씌워 재생할 수 있습니다. 다음의 `0 0 0`은 실물 장착값이 아닌 **시각화 테스트 기준**이며 실제 장착, TCP, 질량, 흡착 동역학을 검증하지 않습니다. 재생 영상은 별도 `mode=visual_replay` 메타데이터와 함께 저장되며 새 그리퍼 동역학 데이터로 사용하면 안 됩니다.
+
+```bash
+ros2 run a0509_dynamics_experiment run_experiment --simulation --trajectory T1 \
+  --gripper-type none --results-dir results/mdpg_visual_source
+ros2 run a0509_dynamics_experiment render_mdpg_replay \
+  results/mdpg_visual_source/simulation/T1/trial_001 results/mdpg_visual/T1/trial_001 \
+  --mount-xyz 0 0 0 --mount-rpy 0 0 0 --visual-fixture
+```
+
+영상 출력은 `mdpg_t1_visual_replay.mp4`, 대표 화면은 `thumbnail.png`입니다. `metadata.json`에는 원본 T1 CSV 해시, 그리퍼를 제외한 원본 시뮬레이션 조건, 미검증 장착 상태가 기록됩니다. 실측 장착 변환이 확보되면 `--mount-xyz`와 `--mount-rpy`를 해당 측정값으로 바꿔 재렌더링할 수 있습니다.
+이번 T1 실행의 [영상](../../docs/media/mdpg_t1_visual/mdpg_t1_visual_replay.mp4), [대표 화면](../../docs/media/mdpg_t1_visual/thumbnail.png), [출처 메타데이터](../../docs/media/mdpg_t1_visual/metadata.json)도 저장소에 보존했습니다.
 
 ## 결과와 데이터 의미
 

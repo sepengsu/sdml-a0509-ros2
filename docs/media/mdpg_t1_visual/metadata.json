@@ -1,0 +1,64 @@
+{
+  "created_utc": "2026-11-10T10:13:03.769304+00:00",
+  "trajectory_id": "T1",
+  "gripper_type": "mdpg_1s1",
+  "mode": "visual_replay",
+  "source_trial": "/ros2_ws/results/mdpg_visual_source/simulation/T1/trial_001",
+  "source_gripper_type": "none",
+  "source_dynamics_sha256": "5d395c76bd975f6e9c16111c8fb428556dd829473131718cc220ec695dafb4d3",
+  "source_samples": 1001,
+  "source_sim_time_duration_s": 10.000000000999998,
+  "mount_xyz_m": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "mount_rpy_rad": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "mount_status": "unverified visualization fixture; not a measured physical offset",
+  "tool_mass_kg": null,
+  "tool_inertia_kg_m2": null,
+  "pneumatic_io": null,
+  "tool_contact_dynamics": null,
+  "motion_type": "kinematic replay of recorded arm qpos; no new dynamics rollout",
+  "tcp_status": "CAD-bounds estimate, not calibrated",
+  "tcp_start_m": [
+    0.12921860306450347,
+    -0.07044373017421698,
+    0.7094955137587923
+  ],
+  "tcp_end_m": [
+    0.12968673262910588,
+    -0.07001835051153095,
+    0.708142611692883
+  ],
+  "tcp_net_displacement_m": [
+    0.0004681295646024042,
+    0.00042537966268603455,
+    -0.0013529020659093227
+  ],
+  "tcp_axis_range_m": [
+    0.12129267243243497,
+    0.0012767268029144352,
+    0.0025762053736767543
+  ],
+  "video": {
+    "relative_path": "mdpg_t1_visual_replay.mp4",
+    "fps": 15,
+    "frames": 151,
+    "resolution": [
+      1280,
+      720
+    ],
+    "sha256": "e4016383a452200cab28559a0b83d405efbd141bca4cc571a4470b8311026714",
+    "camera": {
+      "full_azimuth_deg": 125,
+      "full_elevation_deg": -25,
+      "close_azimuth_deg": 125,
+      "close_elevation_deg": -25
+    }
+  }
+}
