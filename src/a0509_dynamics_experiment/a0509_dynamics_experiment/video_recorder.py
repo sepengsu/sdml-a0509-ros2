@@ -71,5 +71,6 @@ class SimulationVideoRecorder:
             raise RuntimeError(f"video capture failed: {self._error}") from self._error
         if self.frames == 0 or not self.path.is_file() or self.path.stat().st_size == 0:
             raise RuntimeError("video capture produced no frames")
-        return {"path": str(self.path), "fps": self.fps, "frames": self.frames,
+        return {"path": str(self.path), "relative_path": self.path.name,
+                "fps": self.fps, "frames": self.frames,
                 "size_bytes": self.path.stat().st_size}
