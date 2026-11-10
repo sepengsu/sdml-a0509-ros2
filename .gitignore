@@ -6,5 +6,6 @@
 __pycache__/
 .dsr2/
 results/
+data/
 .venv/
 *.egg-info/

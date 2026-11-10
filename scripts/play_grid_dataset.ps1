@@ -28,7 +28,9 @@ if ($ResultsName -notmatch '^[A-Za-z0-9_-]+$') { throw 'ResultsName must use let
 if ($BaseContainer -notmatch '^[A-Za-z0-9_.-]+$') { throw 'BaseContainer has unsupported characters.' }
 if (([int][bool]$Pilot + [int][bool]$Play + [int][bool]$Status) -gt 1) { throw 'Choose one of -Pilot, -Play, -Status.' }
 $repository = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$root = Join-Path $repository (Join-Path 'results' $ResultsName)
+$storageFolder = if ($Campaign -eq 'trajectory16') { 'data' } else { 'results' }
+$storageHost = Join-Path $repository $storageFolder
+$root = Join-Path $storageHost $ResultsName
 $name = "a0509-grid-$ResultsName"
 if ($Status) {
     $report = Join-Path $root 'pilot_report.json'
@@ -143,7 +145,7 @@ try {
     & docker exec $BaseContainer bash -lc $build
     if ($LASTEXITCODE -ne 0) { throw 'ROS2 package build failed.' }
     $mode = if ($Pilot) { '--pilot' } else { '--play' }
-    $command = "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && exec python3 -u -m a0509_dynamics_experiment.grid_simulation --results /ros2_ws/results/$ResultsName --mount-xyz $($MdpgMountXyz -join ' ') --mount-rpy $($MdpgMountRpy -join ' ') --payload-spec /ros2_ws/src/a0509_dynamics_experiment/config/payload_conditions.json $mode --campaign $Campaign --trajectory $Trajectory --max-batches $MaxBatches --max-runs $MaxRuns"
+    $command = "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && exec python3 -u -m a0509_dynamics_experiment.grid_simulation --results /ros2_ws/$storageFolder/$ResultsName --mount-xyz $($MdpgMountXyz -join ' ') --mount-rpy $($MdpgMountRpy -join ' ') --payload-spec /ros2_ws/src/a0509_dynamics_experiment/config/payload_conditions.json $mode --campaign $Campaign --trajectory $Trajectory --max-batches $MaxBatches --max-runs $MaxRuns"
     $oldContainer = @(& docker ps -a --filter "name=^/$name`$" --format '{{.Names}}')
     if ($oldContainer.Count) {
         & docker rm $name | Out-Null
@@ -152,7 +154,7 @@ try {
     $dockerArgs = @('run', '-d', '--name', $name, '--network', 'none',
               '--label', "a0509.collect.run=$ResultsName",
               '--mount', "type=bind,source=$srcHost,destination=/ros2_ws/src,readonly",
-              '--mount', "type=bind,source=$resultsHost,destination=/ros2_ws/results",
+              '--mount', "type=bind,source=$storageHost,destination=/ros2_ws/$storageFolder",
               '--mount', "type=volume,source=$($installMount[0].Name),destination=/ros2_ws/install,readonly",
               '--mount', "type=volume,source=$($buildMount[0].Name),destination=/ros2_ws/build,readonly",
               '--entrypoint', 'bash', $base.Config.Image, '-lc', $command)
