@@ -15,6 +15,10 @@
     "mount_verified": false,
     "pad_direction": "-Z",
     "nominal_tcp_z_m": -0.09,
+    "integration_rotation_rpy_rad": [3.141592653589793, 0, 0],
+    "mounted_pad_direction": "+Z",
+    "mounted_nominal_tcp_z_m": 0.09,
+    "mounting_face_raw_cad_z_m": 0.0,
     "nominal_tcp_verified": false
   },
   "mass_kg": null,
@@ -44,7 +48,7 @@
       ],
       "triangles": 8088,
       "closed_mesh": false,
-      "color_group": "silver",
+      "color_group": "red (visual reference photo)",
       "stl_unit": "millimeter",
       "ros_urdf_mesh_scale": [
         0.001,

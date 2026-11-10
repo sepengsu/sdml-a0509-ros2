@@ -35,7 +35,7 @@ In the active A0509 robot-description xacro (NOT an unrelated copy), remove/cond
 </xacro:mdpg_1s1_gripper>
 ```
 
-**Mount origin warning:** ROS mounting pose `xyz/rpy=0` above is ONLY an illustrative default, NOT a verified interface. The mesh was centered on X around 8.2339 mm and reoriented so the air pad points to -Z; the base origin was inferred from the positive-Y face of the STEP housing. Verify flange bolt center, tooling adapter, pitch, and orientation. The `mdpg_tcp` frame is at -90 mm from this approximate base: check on real gripper.
+**Mount origin warning:** ROS mounting pose `xyz/rpy=0` above is ONLY an illustrative default, NOT a verified interface. The raw CAD mesh was centered on X around 8.2339 mm and its air pad points to -Z; the base origin was inferred from the positive-Y face of the STEP housing. The integrated URDF/MuJoCo visuals rotate that raw mesh 180° about X, so the red mounting face sits at the J6 end and the air pad points outward along mounted +Z. Verify flange bolt center, tooling adapter, pitch, and orientation. The integrated `mdpg_tcp` frame is at +90 mm from this approximate base: check on real gripper.
 
 **Mesh QA:** The `pump_cover`, `bottom_cover` and `led_indicator` STL meshes are not watertight after triangulation, so treat them as visual meshes only. The supplied collisions are simple primitives.
 
@@ -47,9 +47,11 @@ Modeling scope: static rigid gripper **visual geometry only**, not a ROS2 contro
 
 ## A0509 integration in this repository
 
-The active A0509 tool Xacro is `sdml_a0509_description/urdf/a0509_with_gripper.urdf.xacro`. The MuJoCo, RViz-only and RT real-robot launches use it with `gripper_type:=none|ag145|mdpg_1s1`. The mDPG macro is fixed to `link_6`; `mdpg_tcp` is a CAD-bounds estimate at -90 mm, **not a calibrated TCP**. AG145 and mDPG are mutually exclusive in the Xacro and MuJoCo scene.
+The active A0509 tool Xacro is `sdml_a0509_description/urdf/a0509_with_gripper.urdf.xacro`. The MuJoCo, RViz-only and RT real-robot launches use it with `gripper_type:=none|ag145|mdpg_1s1`. The mDPG macro is fixed to `link_6`; after the internal CAD rotation, `mdpg_tcp` is a CAD-bounds estimate at mounted +90 mm, **not a calibrated TCP**. AG145 and mDPG are mutually exclusive in the Xacro and MuJoCo scene.
 
 No mDPG mounting transform is provided. `mdpg_mount_xyz` (m) and `mdpg_mount_rpy` (rad) must be supplied explicitly. The identity pose used in automated visualization tests is a test fixture, not a measured mounting pose. The launch rejects missing mDPG mounting values.
+
+For the **visual-only T1 replay**, the A0509 `A0509_6_0.stl` spans `link_6` local Z = -0.066 to 0 m; its outward face is Z=0. The raw mDPG red mounting face is Z=0 and suction lip Z=-0.090 m. Internally rotating only the CAD geometry 180° about X keeps the red face at Z=0 and puts the pad at mounted Z=+0.090 m. `xyz=(0,0,0), rpy=(0,0,0)` remains an **unmeasured display fixture**; keep the real adapter mount TODO.
 
 ```bash
 colcon build --symlink-install --packages-select mdpg_1s1_description sdml_a0509_description a0509_mujoco_sim sdml_a0509_bringup a0509_dynamics_experiment

@@ -6,7 +6,7 @@ inertia_tensor_kg_m2: null # [ixx, iyy, izz, ixy, ixz, iyz]
 mount_to_link_6_xyz_m: null
 mount_to_link_6_rpy_rad: null
 mount_verified: false
-pad_nominal_tcp_z_m: -0.09   # CAD-bounds estimate only
+pad_nominal_tcp_z_m: 0.09    # mounted tool frame after CAD 180-degree flip; not calibrated
 tcp_calibrated: false
 pad_contact_dynamics: null
 pneumatic_io: null           # TODO: valve outputs, pressure/vacuum inputs and safe states

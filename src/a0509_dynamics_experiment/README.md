@@ -78,7 +78,7 @@ AG145 Preview는 MuJoCo Python 패키지가 설치된 환경에서 로컬 모델
 
 첨부된 `mdpg_1s1_description`의 STL/Xacro를 A0509 `link_6`에 고정 연결했습니다. 활성 URDF는 `sdml_a0509_description/urdf/a0509_with_gripper.urdf.xacro`이며, `gripper_type:=ag145|mdpg_1s1|none`으로 하나만 선택합니다. MuJoCo 기본 launch도 같은 값을 받아 선택된 시각 모델을 장착합니다.
 
-공압 그리퍼의 장착 위치·회전은 제공된 STEP으로 확인할 수 없으므로 `mdpg_mount_xyz`(m)와 `mdpg_mount_rpy`(rad)를 명시해야 합니다. 누락하면 launch가 거부합니다. `mdpg_tcp`의 -90 mm는 CAD 외곽 기준 잠정 값이며 보정된 실제 TCP가 아닙니다. MuJoCo에는 메시만 넣고 **질량·관성·접촉·흡착력을 넣지 않았습니다**. `mdpg_1s1_description/config/dynamics_values_to_measure.yaml`에 물리량과 공압 IO의 TODO가 남아 있습니다.
+공압 그리퍼의 장착 위치·회전은 제공된 STEP으로 확인할 수 없으므로 `mdpg_mount_xyz`(m)와 `mdpg_mount_rpy`(rad)를 명시해야 합니다. 누락하면 launch가 거부합니다. `mdpg_tcp`의 장착 프레임 기준 +90 mm는 CAD 외곽 기준 잠정 값이며 보정된 실제 TCP가 아닙니다. MuJoCo에는 메시만 넣고 **질량·관성·접촉·흡착력을 넣지 않았습니다**. `mdpg_1s1_description/config/dynamics_values_to_measure.yaml`에 물리량과 공압 IO의 TODO가 남아 있습니다.
 
 ```bash
 # 측정된 link_6 장착 변환으로 치환할 것. 숫자 0을 실제 장착값으로 가정하지 말 것.
@@ -89,7 +89,7 @@ ros2 run a0509_dynamics_experiment run_experiment --preview --trajectory T1 --gr
 
 실로봇의 `a0509_real.launch.py gripper_type:=mdpg_1s1`은 AG145 구동/피킹 노드 없이 RT 상태 발행과 RViz를 사용합니다. 실제 접속은 검증하지 않았습니다. `run_experiment --simulation --gripper-type mdpg_1s1`의 **동역학 기록**과 `--execute`는 물리 파라미터·공압 IO·장착/안전 검증이 없어서 차단합니다.
 
-장착 위치가 미측정인 상태에서 **영상만** 필요하면, T1을 그리퍼 없이 MuJoCo에서 실행한 관절 기록에 mDPG 시각 메시를 덧씌워 재생할 수 있습니다. 다음의 `0 0 0`은 실물 장착값이 아닌 **시각화 테스트 기준**이며 실제 장착, TCP, 질량, 흡착 동역학을 검증하지 않습니다. 재생 영상은 별도 `mode=visual_replay` 메타데이터와 함께 저장되며 새 그리퍼 동역학 데이터로 사용하면 안 됩니다.
+장착 위치가 미측정인 상태에서 **영상만** 필요하면, T1을 그리퍼 없이 MuJoCo에서 실행한 관절 기록에 mDPG 시각 메시를 덧씌워 재생할 수 있습니다. A0509 `A0509_6_0.stl`은 `link_6` 로컬 Z=-66~0 mm이고 끝 장착면이 Z=0입니다. mDPG CAD는 빨간 덮개의 반대편 장착면이 Z=0, 빨판이 -90 mm이므로, **CAD 메시 자체를 X축으로 180° 회전**해 빨간 면을 J6 끝에 두고 빨판을 바깥쪽(+Z)으로 향하게 했습니다. 다음의 `0 0 0`은 실물 장착값이 아닌 **시각화 테스트 기준**이며 실제 어댑터, TCP, 질량, 흡착 동역학을 검증하지 않습니다. 재생 영상은 별도 `mode=visual_replay` 메타데이터와 함께 저장되며 새 그리퍼 동역학 데이터로 사용하면 안 됩니다.
 
 ```bash
 ros2 run a0509_dynamics_experiment run_experiment --simulation --trajectory T1 \

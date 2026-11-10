@@ -113,7 +113,7 @@ def render_mdpg_replay(source_trial: str | Path, output_dir: str | Path,
                 frame.paste(Image.fromarray(close_frame), (800, 60))
                 draw = ImageDraw.Draw(frame)
                 draw.text((20, 14), "A0509  |  T1 linear reciprocation  |  mDPG_1S1 visual replay", fill="white")
-                draw.text((20, 42), "Recorded MuJoCo arm motion; gripper geometry only; mount unverified", fill="#f9c66b")
+                draw.text((20, 42), "Red mounting face at J6 | suction outward | visual fixture, mount unverified", fill="#f9c66b")
                 draw.text((20, 684), f"ROS simulation time  {target_time-times[0]:.2f} s", fill="white")
                 draw.text((815, 684), "Close view: wrist + suction gripper", fill="white")
                 if frame_index == 0:
@@ -135,6 +135,8 @@ def render_mdpg_replay(source_trial: str | Path, output_dir: str | Path,
         "mount_xyz_m": list(map(float, mount_xyz)),
         "mount_rpy_rad": list(map(float, mount_rpy)),
         "mount_status": "unverified visualization fixture; not a measured physical offset",
+        "cad_to_mount_rotation_rpy_rad": [math.pi, 0.0, 0.0],
+        "mounted_suction_direction": "+Z in mdpg_base_link / link_6 when fixture RPY is zero",
         "tool_mass_kg": None, "tool_inertia_kg_m2": None,
         "pneumatic_io": None, "tool_contact_dynamics": None,
         "motion_type": "kinematic replay of recorded arm qpos; no new dynamics rollout",

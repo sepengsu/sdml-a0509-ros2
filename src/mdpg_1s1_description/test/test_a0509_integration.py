@@ -1,10 +1,12 @@
 """Check selected end-effectors in the active A0509 descriptions."""
 
 from pathlib import Path
+import struct
 import tempfile
 import xml.etree.ElementTree as ET
 
 import mujoco
+import numpy as np
 import pytest
 import xacro
 from ament_index_python.packages import get_package_share_directory
@@ -19,7 +21,7 @@ ARM_SCENE = Path(get_package_share_directory("dsr_description2")) / "mujoco_mode
 def expand(gripper_type):
     doc = xacro.process_file(str(TOOL_XACRO), mappings={
         "gripper_type": gripper_type,
-        # Explicit identity transform is only a display/test pose, not a measured mount.
+        # Identity is an unmeasured display fixture, not an adapter pose.
         "mdpg_mount_xyz": "0 0 0",
         "mdpg_mount_rpy": "0 0 0",
     })
@@ -49,6 +51,34 @@ def test_xacro_tool_selection(gripper, expected_link, other_link):
         assert root.find(".//link[@name='mdpg_tcp']") is not None
         assert len(root.findall(".//link[@name='mdpg_base_link']/visual")) == 6
         assert root.find(".//link[@name='mdpg_base_link']/inertial") is None
+        assert mount.find("origin").attrib["xyz"] == "0 0 0"
+        assert all(visual.find("origin").attrib["rpy"] == "3.141592653589793 0 0"
+                   for visual in root.findall(".//link[@name='mdpg_base_link']/visual"))
+        tcp_joint = next(joint for joint in root.findall(".//joint")
+                         if joint.attrib.get("name") == "mdpg_tcp_joint")
+        assert [float(value) for value in tcp_joint.find("origin").attrib["xyz"].split()] == [0, 0, 0.09]
+        assert tcp_joint.find("origin").attrib["rpy"] == "3.141592653589793 0 0"
+
+
+def _stl_z_bounds(path):
+    raw = path.read_bytes()
+    faces = struct.unpack_from("<I", raw, 80)[0]
+    vertices = np.ndarray((faces, 3, 3), dtype="<f4", buffer=raw, offset=96,
+                          strides=(50, 12, 4))
+    return np.min(vertices[:, :, 2]) / 1000, np.max(vertices[:, :, 2]) / 1000
+
+
+def test_visual_mount_rotates_cad_pad_outward_from_j6_end():
+    arm_z_min, arm_z_max = _stl_z_bounds(ARM_SCENE.parent / "assets/A0509_6_0.stl")
+    _, housing_z_max = _stl_z_bounds(Path(get_package_share_directory("mdpg_1s1_description"))
+                                     / "meshes/pump_cover.stl")
+    pad_z_min, _ = _stl_z_bounds(Path(get_package_share_directory("mdpg_1s1_description"))
+                                / "meshes/air_pad_contact.stl")
+    assert arm_z_min == pytest.approx(-0.066, abs=1e-6)
+    assert arm_z_max == pytest.approx(0.0, abs=1e-6)
+    assert housing_z_max == pytest.approx(0.0, abs=1e-6)
+    assert pad_z_min == pytest.approx(-0.090, abs=1e-6)
+    assert -pad_z_min > housing_z_max
 
 
 def test_mdpg_mujoco_visual_only_and_mount_required():
@@ -69,3 +99,11 @@ def test_mdpg_mujoco_visual_only_and_mount_required():
         assert len(visuals) == 6
         assert all(model.geom_contype[i] == 0 and model.geom_conaffinity[i] == 0
                    for i in visuals)
+        data = mujoco.MjData(model)
+        mujoco.mj_forward(model, data)
+        flange = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "link_6")
+        tcp = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "mdpg_tcp")
+        local_tcp = data.xmat[flange].reshape(3, 3).T @ (data.site_xpos[tcp] - data.xpos[flange])
+        np.testing.assert_allclose(local_tcp, [0, 0, 0.09], atol=1e-6)
+        local_tcp_rotation = data.xmat[flange].reshape(3, 3).T @ data.site_xmat[tcp].reshape(3, 3)
+        np.testing.assert_allclose(local_tcp_rotation, np.diag([1, -1, -1]), atol=1e-6)

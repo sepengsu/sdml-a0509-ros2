@@ -8,14 +8,15 @@ import xml.etree.ElementTree as ET
 
 
 PARTS = {
-    "pump_cover": "0.78 0.80 0.83 1",
+    "pump_cover": "0.68 0.18 0.19 1",
     "led_indicator": "1.0 0.65 0.06 1",
     "bottom_cover": "0.32 0.34 0.37 1",
     "solid33": "0.12 0.12 0.14 1",
     "air_pad_body": "0.18 0.19 0.21 1",
     "air_pad_contact": "0.10 0.27 0.45 1",
 }
-CAD_NOMINAL_TCP_Z_M = -0.09  # CAD bound, not a calibrated tool frame.
+CAD_NOMINAL_TCP_Z_M = -0.09  # Raw CAD axis; the installed tool frame flips X by 180 deg.
+CAD_TO_MOUNT_QUAT = "0 1 0 0"  # Red Z=0 face at flange; suction -Z becomes mount +Z.
 
 
 def _share(package: str, local_parts: tuple[str, ...]) -> Path:
@@ -101,7 +102,8 @@ def build_mdpg_scene(output: str | Path, mount_xyz, mount_rpy,
     # A MJCF frame attaches visuals to link_6 without creating a massless body.
     tool = ET.SubElement(flange, "frame", name="mdpg_base_link",
                          pos=" ".join(str(value) for value in xyz), quat=_rpy_quat(rpy))
-    ET.SubElement(tool, "site", name="mdpg_tcp", pos=f"0 0 {CAD_NOMINAL_TCP_Z_M}",
+    cad = ET.SubElement(tool, "frame", name="mdpg_cad_frame", quat=CAD_TO_MOUNT_QUAT)
+    ET.SubElement(cad, "site", name="mdpg_tcp", pos=f"0 0 {CAD_NOMINAL_TCP_Z_M}",
                   size="0.004", rgba="0.1 0.5 1 1")
     for part, color in PARTS.items():
         mesh_file = gripper_share / "meshes" / f"{part}.stl"
@@ -109,7 +111,7 @@ def build_mdpg_scene(output: str | Path, mount_xyz, mount_rpy,
             raise FileNotFoundError(mesh_file)
         ET.SubElement(assets, "mesh", name=f"mdpg_{part}",
                       file=mesh_file.as_posix(), scale="0.001 0.001 0.001")
-        ET.SubElement(tool, "geom", name=f"mdpg_{part}_visual", type="mesh",
+        ET.SubElement(cad, "geom", name=f"mdpg_{part}_visual", type="mesh",
                       mesh=f"mdpg_{part}", rgba=color, density="0",
                       contype="0", conaffinity="0", group="2")
     output = Path(output).resolve()

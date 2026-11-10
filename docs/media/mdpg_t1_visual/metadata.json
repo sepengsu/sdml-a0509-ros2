@@ -1,5 +1,5 @@
 {
-  "created_utc": "2026-11-10T10:13:03.769304+00:00",
+  "created_utc": "2026-11-10T10:21:37.317958+00:00",
   "trajectory_id": "T1",
   "gripper_type": "mdpg_1s1",
   "mode": "visual_replay",
@@ -19,6 +19,12 @@
     0.0
   ],
   "mount_status": "unverified visualization fixture; not a measured physical offset",
+  "cad_to_mount_rotation_rpy_rad": [
+    3.141592653589793,
+    0.0,
+    0.0
+  ],
+  "mounted_suction_direction": "+Z in mdpg_base_link / link_6 when fixture RPY is zero",
   "tool_mass_kg": null,
   "tool_inertia_kg_m2": null,
   "pneumatic_io": null,
@@ -26,24 +32,24 @@
   "motion_type": "kinematic replay of recorded arm qpos; no new dynamics rollout",
   "tcp_status": "CAD-bounds estimate, not calibrated",
   "tcp_start_m": [
-    0.12921860306450347,
-    -0.07044373017421698,
-    0.7094955137587923
+    0.20559912594384375,
+    -0.11208642647361125,
+    0.8670769262718007
   ],
   "tcp_end_m": [
-    0.12968673262910588,
-    -0.07001835051153095,
-    0.708142611692883
+    0.20653685976727856,
+    -0.11191630800537546,
+    0.8654277639377489
   ],
   "tcp_net_displacement_m": [
-    0.0004681295646024042,
-    0.00042537966268603455,
-    -0.0013529020659093227
+    0.0009377338234348165,
+    0.00017011846823579424,
+    -0.001649162334051768
   ],
   "tcp_axis_range_m": [
-    0.12129267243243497,
-    0.0012767268029144352,
-    0.0025762053736767543
+    0.12247341120326613,
+    0.0015378454585441986,
+    0.0033051368326072472
   ],
   "video": {
     "relative_path": "mdpg_t1_visual_replay.mp4",
@@ -53,7 +59,7 @@
       1280,
       720
     ],
-    "sha256": "e4016383a452200cab28559a0b83d405efbd141bca4cc571a4470b8311026714",
+    "sha256": "57ae15d11a63eb282d329db1339c351f380d5feeaa05ab83307685405af0f785",
     "camera": {
       "full_azimuth_deg": 125,
       "full_elevation_deg": -25,
