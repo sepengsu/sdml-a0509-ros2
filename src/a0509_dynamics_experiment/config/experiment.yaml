@@ -1,0 +1,12 @@
+sample_hz: 100
+speed_profiles:
+  low_segment_seconds: 4.0
+  medium_segment_seconds: 2.0
+pre_hold_seconds: 1.0
+post_hold_seconds: 1.0
+rt_topic_max_age_ms: 30
+joint_order: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6]
+torque_semantics:
+  actual_motor_torque: "gear-ratio/current conversion, Nm; not independent sensor"
+  actual_joint_torque: "controller estimate, Nm; not independent sensor"
+  external_joint_torque: "controller estimate, Nm"

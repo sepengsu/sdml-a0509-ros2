@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot name="sdml_a0509_camera" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <link name="camera_mount"/>
+  <xacro:include filename="$(find sdml_a0509_camera)/urdf/_d435i.urdf.xacro"/>
+
+  <xacro:sensor_d435i parent="camera_mount" name="camera" use_nominal_extrinsics="true">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:sensor_d435i>
+</robot>

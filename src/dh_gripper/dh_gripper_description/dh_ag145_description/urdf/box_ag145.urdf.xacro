@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<robot name="box_ag145" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!--
+    단독 시각화: world + box_ag145_assembly
+    로봇 팔에 붙일 때는 box_ag145_macro.xacro 의 box_ag145_assembly 만 include 해서 사용.
+  -->
+  <xacro:include filename="$(find dh_ag145_description)/urdf/box_ag145_macro.xacro"/>
+
+  <xacro:arg name="prefix" default=""/>
+
+  <xacro:arg name="gripper_xyz" default="0 0 0.1"/>
+  <xacro:arg name="gripper_rpy" default="0 0 0"/>
+
+  <xacro:arg name="box1_xyz" default="0.046207 0.0143 0.014717"/>
+  <xacro:arg name="box1_rpy" default="0 0 1.5708"/>
+
+  <xacro:arg name="cam_xyz" default="0.045 0.045 0.095025"/>
+  <xacro:arg name="cam_rpy" default="0 -1.5708 0"/>
+
+  <link name="world"/>
+
+  <xacro:box_ag145_assembly
+    parent="world"
+    prefix="$(arg prefix)"
+    gripper_xyz="$(arg gripper_xyz)"
+    gripper_rpy="$(arg gripper_rpy)"
+    box1_xyz="$(arg box1_xyz)"
+    box1_rpy="$(arg box1_rpy)"
+    cam_xyz="$(arg cam_xyz)"
+    cam_rpy="$(arg cam_rpy)"
+    />
+</robot>

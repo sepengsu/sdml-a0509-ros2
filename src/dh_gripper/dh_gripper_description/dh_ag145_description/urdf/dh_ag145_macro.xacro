@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:property name="mesh_dir" value="package://dh_ag145_description/meshes"/>
+  <xacro:property name="lower_limit" value="0.0"/>
+  <xacro:property name="upper_limit" value="0.93"/>
+
+  <xacro:macro name="mesh_link" params="name mesh xyz rpy">
+    <link name="${name}">
+      <visual>
+        <origin xyz="${xyz}" rpy="${rpy}"/>
+        <geometry>
+          <mesh filename="${mesh_dir}/${mesh}" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <xacro:if value="${mesh == 'base_link.stl' or mesh == 'left_finger.stl' or mesh == 'right_finger.stl'}">
+          <material name="blue_grey"><color rgba="0.792 0.819 0.933 1"/></material>
+        </xacro:if>
+        <xacro:unless value="${mesh == 'base_link.stl' or mesh == 'left_finger.stl' or mesh == 'right_finger.stl'}">
+          <material name="dark_grey"><color rgba="0.1 0.1 0.1 1"/></material>
+        </xacro:unless>
+      </visual>
+      <collision>
+        <origin xyz="${xyz}" rpy="${rpy}"/>
+        <geometry>
+          <mesh filename="${mesh_dir}/${mesh}" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="gripper_links" params="prefix">
+    <xacro:mesh_link name="${prefix}base_link" mesh="base_link.stl" xyz="0 0 0" rpy="1.57079 0 3.14159"/>
+    <xacro:mesh_link name="${prefix}body_link" mesh="body.stl" xyz="0.00389 0.00075 0.05048" rpy="1.57079 0 3.14159"/>
+
+    <xacro:mesh_link name="${prefix}left_outer_knuckle" mesh="left_outer_knuckle.stl" xyz="0.03981 0.00075 -0.04785" rpy="1.57079 0 3.14159"/>
+    <xacro:mesh_link name="${prefix}left_inner_knuckle" mesh="left_inner_knuckle.stl" xyz="-0.01432 0 0.01004" rpy="1.57079 0.83872 -3.14159"/>
+    <xacro:mesh_link name="${prefix}left_finger" mesh="left_finger.stl" xyz="0.01917854988 0 0.00752444316" rpy="1.57079 0 3.14159"/>
+
+    <xacro:mesh_link name="${prefix}right_outer_knuckle" mesh="right_outer_knuckle.stl" xyz="-0.03203 0.00075 -0.04785" rpy="1.57079 0 3.14159"/>
+    <xacro:mesh_link name="${prefix}right_inner_knuckle" mesh="right_inner_knuckle.stl" xyz="0.01432 0 0.01004" rpy="1.57079 0.83872 0"/>
+    <xacro:mesh_link name="${prefix}right_finger" mesh="right_finger.stl" xyz="-0.01917854988 0 0.00752444316" rpy="1.57079 0 0"/>
+  </xacro:macro>
+
+  <xacro:macro name="gripper_joints" params="prefix">
+    <joint name="${prefix}base_to_body" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}body_link"/>
+      <origin xyz="0 0 0.0" rpy="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}left_outer_knuckle_joint" type="revolute">
+      <parent link="${prefix}body_link"/>
+      <child link="${prefix}left_outer_knuckle"/>
+      <origin xyz="-0.03592 0.0 0.09834" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${lower_limit}" upper="${upper_limit}" effort="100" velocity="0.1"/>
+    </joint>
+
+    <joint name="${prefix}left_inner_knuckle_joint" type="revolute">
+      <parent link="${prefix}body_link"/>
+      <child link="${prefix}left_inner_knuckle"/>
+      <origin xyz="-0.01674 0.0 0.10586" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${lower_limit}" upper="${upper_limit}" effort="100" velocity="0.1"/>
+      <mimic joint="${prefix}left_outer_knuckle_joint" multiplier="1" offset="0"/>
+    </joint>
+
+    <joint name="${prefix}left_finger_joint" type="revolute">
+      <parent link="${prefix}left_outer_knuckle"/>
+      <child link="${prefix}left_finger"/>
+      <origin xyz="-0.06400 0.0 0.05818" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-${upper_limit}" upper="0" effort="100" velocity="0.1"/>
+      <mimic joint="${prefix}left_outer_knuckle_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <joint name="${prefix}right_outer_knuckle_joint" type="revolute">
+      <parent link="${prefix}body_link"/>
+      <child link="${prefix}right_outer_knuckle"/>
+      <origin xyz="0.03592 0.0 0.09834" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-${upper_limit}" upper="0" effort="100" velocity="0.1"/>
+      <mimic joint="${prefix}left_outer_knuckle_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <joint name="${prefix}right_inner_knuckle_joint" type="revolute">
+      <parent link="${prefix}body_link"/>
+      <child link="${prefix}right_inner_knuckle"/>
+      <origin xyz="0.01674 0.0 0.10586" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-${upper_limit}" upper="0" effort="100" velocity="0.1"/>
+      <mimic joint="${prefix}left_outer_knuckle_joint" multiplier="-1" offset="0"/>
+    </joint>
+
+    <joint name="${prefix}right_finger_joint" type="revolute">
+      <parent link="${prefix}right_outer_knuckle"/>
+      <child link="${prefix}right_finger"/>
+      <origin xyz="0.06400 0.0 0.05818" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="0" upper="${upper_limit}" effort="100" velocity="0.1"/>
+      <mimic joint="${prefix}left_outer_knuckle_joint" multiplier="1" offset="0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="dh_ag145_gripper" params="prefix parent *origin">
+    <xacro:gripper_links prefix="${prefix}"/>
+    <xacro:gripper_joints prefix="${prefix}"/>
+    <joint name="${prefix}gripper_base_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${prefix}base_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

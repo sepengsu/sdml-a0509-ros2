@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot name="ag95_ag145_compare" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    Visualization-only composite URDF:
+    - Spawns AG95 + AG145 grippers under one robot_description.
+    - Uses prefixes so joint/link names do not collide and can be controlled independently
+      via joint_state_publisher_gui sliders.
+  -->
+
+  <xacro:arg name="ag95_prefix" default="ag95_"/>
+  <xacro:arg name="ag145_prefix" default="ag145_"/>
+
+  <!-- Simple placement so both are visible side-by-side -->
+  <xacro:arg name="ag95_xyz" default="-0.15 0 0.10"/>
+  <xacro:arg name="ag95_rpy" default="0 0 0"/>
+  <xacro:arg name="ag145_xyz" default="0.15 0 0.10"/>
+  <xacro:arg name="ag145_rpy" default="0 0 0"/>
+
+  <!-- Import macros from both description packages -->
+  <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95_macro.xacro" />
+  <xacro:include filename="$(find dh_ag145_description)/urdf/dh_ag145_macro.xacro" />
+
+  <link name="world" />
+
+  <xacro:dh_ag95_gripper prefix="$(arg ag95_prefix)" parent="world">
+    <origin xyz="$(arg ag95_xyz)" rpy="$(arg ag95_rpy)" />
+  </xacro:dh_ag95_gripper>
+
+  <xacro:dh_ag145_gripper prefix="$(arg ag145_prefix)" parent="world">
+    <origin xyz="$(arg ag145_xyz)" rpy="$(arg ag145_rpy)" />
+  </xacro:dh_ag145_gripper>
+
+</robot>
+

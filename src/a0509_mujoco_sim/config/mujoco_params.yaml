@@ -1,0 +1,6 @@
+mujoco:
+
+  timestep: 0.002
+  gravity: [0, 0, -9.81]
+
+  solver_iterations: 50

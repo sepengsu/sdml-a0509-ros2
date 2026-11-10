@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>a0509_mujoco_sim</name>
+  <version>0.0.1</version>
+  <description>A0509 MuJoCo grasp simulation</description>
+
+  <maintainer email="na06219@naver.com">user</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+
+  <depend>xacro</depend>
+  <depend>dsr_description2</depend>
+
+  <depend>ros2_control</depend>
+  <depend>ros2_controllers</depend>
+  <depend>controller_manager</depend>
+
+  <depend>mujoco_ros2_control</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

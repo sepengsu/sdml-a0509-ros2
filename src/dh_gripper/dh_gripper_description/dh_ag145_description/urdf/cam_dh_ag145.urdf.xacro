@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot name="cam_dh_ag145" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    DH AG145 gripper + RealSense D435i (via sdml_a0509_camera).
+    Visualization / kinematic tree only (no ros2_control here).
+  -->
+
+  <xacro:arg name="prefix" default=""/>
+  <xacro:arg name="gripper_xyz" default="0 0 0.1"/>
+  <xacro:arg name="gripper_rpy" default="0 0 0"/>
+  <!-- Camera mount on gripper base (tune for your bracket) -->
+  <!-- Origin expressed in prefixed base_link frame -->
+  <xacro:arg name="cam_xyz" default="0 0 0.06"/>
+  <xacro:arg name="cam_rpy" default="0 0 0"/>
+
+  <xacro:include filename="$(find dh_ag145_description)/urdf/dh_ag145_macro.xacro"/>
+  <xacro:include filename="$(find sdml_a0509_camera)/urdf/_d435i.urdf.xacro"/>
+
+  <link name="world"/>
+
+  <xacro:dh_ag145_gripper prefix="$(arg prefix)" parent="world">
+    <origin xyz="$(arg gripper_xyz)" rpy="$(arg gripper_rpy)"/>
+  </xacro:dh_ag145_gripper>
+
+  <link name="camera_mount"/>
+  <joint name="$(arg prefix)gripper_camera_mount_joint" type="fixed">
+    <parent link="$(arg prefix)base_link"/>
+    <child link="camera_mount"/>
+    <origin xyz="$(arg cam_xyz)" rpy="$(arg cam_rpy)"/>
+  </joint>
+
+  <xacro:sensor_d435i parent="camera_mount" name="camera" use_nominal_extrinsics="true">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:sensor_d435i>
+</robot>

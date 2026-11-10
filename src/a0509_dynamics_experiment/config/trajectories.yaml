@@ -1,0 +1,14 @@
+# Research starting values only. No path below has been certified on a real A0509.
+T1:
+  name: Linear Reciprocation
+  delta_mm: [120, 0, 0]
+T2:
+  name: Spatial Diagonal
+  delta_mm: [0, 80, 60]
+T3:
+  name: 3D Box Trajectory
+  delta_mm: [120, 80, 60]
+T4:
+  name: Joint Excitation
+  amplitude_deg: 5
+  default_mode: sequential

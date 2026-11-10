@@ -1,0 +1,27 @@
+# Based on dsr_controller2/config/dsr_controller2.yaml at submodule c3c8c612.
+# The experiment launch uses this file instead of modifying the Doosan submodule.
+/**:
+  controller_manager:
+    ros__parameters:
+      update_rate: 100
+      joint_state_broadcaster:
+        type: joint_state_broadcaster/JointStateBroadcaster
+      dsr_controller2:
+        type: dsr_controller2/RobotController
+  dsr_controller2:
+    ros__parameters:
+      joints: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6]
+      use_rt_topic_pub: true
+      rt_timer_ms: 10
+      rt_topic_keys:
+        - actual_joint_position
+        - actual_joint_velocity
+        - actual_motor_torque
+        - actual_joint_torque
+        - external_joint_torque
+        - actual_tcp_position
+        - target_joint_position
+        - joint_temperature
+        - time_stamp
+        - robot_state
+        - singularity

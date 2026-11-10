@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>a0509_dynamics_experiment</name>
+  <version>0.1.0</version>
+  <description>A0509 dynamics experiment runner and dataset exporter</description>
+  <maintainer email="na06219@naver.com">SDML</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>rosbag2_transport</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>dsr_msgs2</exec_depend>
+  <exec_depend>a0509_mujoco_sim</exec_depend>
+  <exec_depend>sdml_a0509_bringup</exec_depend>
+  <exec_depend>dsr_bringup2</exec_depend>
+  <exec_depend>dsr_controller2</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <test_depend>python3-pytest</test_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

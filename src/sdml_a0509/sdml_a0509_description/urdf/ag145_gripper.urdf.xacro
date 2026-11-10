@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot name="sdml_ag145_gripper" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Entry xacro in sdml_a0509_description for AG145 gripper -->
+  <xacro:arg name="prefix" default="ag145_"/>
+  <xacro:arg name="parent" default="world"/>
+  <xacro:arg name="xyz" default="0 0 0"/>
+  <xacro:arg name="rpy" default="0 0 0.7853981634"/>
+
+  <xacro:include filename="$(find dh_ag145_description)/urdf/dh_ag145_macro.xacro"/>
+  <link name="world"/>
+  <xacro:dh_ag145_gripper prefix="$(arg prefix)" parent="$(arg parent)">
+    <origin xyz="$(arg xyz)" rpy="$(arg rpy)"/>
+  </xacro:dh_ag145_gripper>
+</robot>
+
