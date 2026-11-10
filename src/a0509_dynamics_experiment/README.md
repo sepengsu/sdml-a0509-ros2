@@ -139,6 +139,25 @@ MuJoCo에서는 박스의 질량·관성이 토크 계산에 반영되고 반투
 
 `-UseCadFaceCenterFixture`는 빨간 장착면 중심을 J6 끝에 일치시키는 영상/CAD 기준 `(0,0,0)` 변환을 **실측이 아닌 시뮬레이션 가정으로** 선택합니다. CAD 메시 자체의 X축 180° 회전은 모델 내부에 이미 적용돼 있으므로 장착 `rpy`에 다시 더하지 않습니다. 선택 근거와 변환값은 결과 루트의 `mount_declaration.json`에 보존되며, 각 trial metadata의 `mount_verified`는 false입니다. 실측 변환을 넣어 재실행하면 기존 결과의 변환과 비교해 달라진 조건을 완료된 trial로 건너뛰지 않습니다. 실로봇 장착·TCP·공압 IO 검증에는 사용할 수 없습니다.
 
+#### 병렬 MuJoCo 수집
+
+`scripts/play_7_condition_dataset_parallel.ps1`은 `-RobotCount`만큼 독립적인 **시뮬레이션 로봇 컨테이너**를 실행합니다. 각 컨테이너에 별도 `ROS_DOMAIN_ID`를 주고, `(조건, 반복)` 단위로 14개 궤적을 한 작업자에게 배정합니다. 동일 trial을 두 작업자가 동시에 쓰지 않으며, 완료 메타데이터·CSV·Bag·모델 조건을 검증한 뒤 이어서 수집합니다. 기존 `results/recollection_7conditions_grasp_v2/`의 완료 trial도 재사용합니다. 컨테이너는 분리되어 있지만 설치된 ROS 패키지는 읽기 전용으로 공유합니다. 스크립트는 첫 실행 전 기존 `a0509-dynamics`에서 한 번 빌드합니다.
+
+```powershell
+# 계획만 출력
+.\scripts\play_7_condition_dataset_parallel.ps1 -RobotCount 4
+
+# 이미 수집한 결과를 건너뛰고, 독립 MuJoCo 로봇 4대로 재개
+.\scripts\play_7_condition_dataset_parallel.ps1 -Play -RobotCount 4 -UseCadFaceCenterFixture -ResultsName recollection_7conditions_grasp_v2
+
+# 진행 상태와 컨테이너 상태 확인
+.\scripts\play_7_condition_dataset_parallel.ps1 -Status -ResultsName recollection_7conditions_grasp_v2
+```
+
+작업자는 Docker에서 백그라운드로 실행되며 로그는 `results/<ResultsName>/parallel_runs/<run_id>/worker_XX.log`에 저장합니다. 중단 후 같은 `-Play` 명령을 다시 실행하면 성공한 trial을 건너뛰고 새 작업자를 시작합니다. 같은 결과 폴더에서 기존 순차 수집과 병렬 수집을 동시에 실행하면 안 됩니다. 기본값은 영상 기록을 생략합니다. `-RecordVideo`를 명시하면 모든 trial의 영상을 기록하므로 수집이 느려지고, 기존 영상 없는 trial도 재실행합니다. `-RobotCount`는 1~8을 지원하지만 16 GB Docker 메모리 환경에서는 2~4부터 시작해 CPU·메모리 사용률을 확인하세요.
+
+병렬 수집은 각 trial의 100 Hz 원자료, ROS Bag, 최종 궤적·동역학 그래프를 유지합니다. 실행 전 임시 궤적 그래프 중복 생성과 T5~T14 매 trial의 전체 요약을 제거하고, 요약·품질 분석은 `(조건, 반복)`의 14개 궤적을 모두 기록한 뒤 한 번 실행합니다. 모든 작업은 `--simulation`만 사용하며 실로봇 연결이나 이동은 하지 않습니다.
+
 ### Dynamics10: 신규 관절 여기 T5~T14
 
 T5~T14는 AG145 고정 개방 자세의 MuJoCo 시뮬레이션 데이터 확장을 위한 관절 궤적입니다. T5는 J2/J3 교대, T6은 J1/J4 결합, T7은 J5/J6 손목, T8은 J1/J3/J5, T9는 J2/J4/J6, T10은 6축 동시 multi-sine입니다. T11은 J2/J3/J5 chirp, T12는 다른 관절 J1/J4/J6 chirp입니다. T13과 T14는 각각 다른 시작 자세에서 다관절 또는 순차·동시 운동을 결합합니다. 각 축의 진폭·주파수·위상·운동 구간은 `trajectory_generator.EXCITATIONS`와 개별 `metadata.json`에 기록합니다. 시작/종료에는 C2 quintic envelope를 쓰고 위치·속도·가속도를 같은 해석식에서 계산합니다.

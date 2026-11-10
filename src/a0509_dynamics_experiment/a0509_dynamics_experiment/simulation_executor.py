@@ -448,9 +448,6 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
         save_trajectory(plan, folder)
         snapshots = [observer.links_mm(targets[i]) for i in
                      sorted({0, len(targets) // 4, len(targets) // 2, 3 * len(targets) // 4, len(targets) - 1})]
-        save_trajectory_plot(plan, folder, robot_links_mm=observer.links_mm(start_q),
-                             robot_snapshots_mm=snapshots,
-                             planned_xyz_mm=planned_tcp if is_joint_trajectory(config.trajectory_id) else None)
         if record_video:
             from .video_recorder import SimulationVideoRecorder
             video = SimulationVideoRecorder(folder / "simulation.mp4")
