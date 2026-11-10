@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 from .dataset_exporter import create_trial, save_metadata, save_trajectory
-from .trajectory_generator import (DYNAMICS10_IDS, TRAJECTORY_IDS, TrajectoryConfig,
+from .trajectory_generator import (DYNAMICS10_IDS, EXCITATION_IDS, TRAJECTORY_IDS, TrajectoryConfig,
                                    excitation_metadata, generate, is_joint_trajectory)
 from .trajectory_visualizer import save_trajectory_plot
 
@@ -59,11 +59,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    new_joint = args.trajectory_set == "dynamics10" or args.trajectory in DYNAMICS10_IDS
+    new_joint = args.trajectory_set == "dynamics10" or args.trajectory in EXCITATION_IDS
     if new_joint and not (args.preview or args.simulation):
-        parser.error("T5-T14 are simulation/preview only; real mode is unavailable")
+        parser.error("T5-T16 are simulation/preview only; real mode is unavailable")
     if new_joint and (args.reference_tcp_mm or args.end_mm or args.start_mm != (0, 0, 0)):
-        parser.error("T5-T14 are joint-space paths; Cartesian options are unsupported")
+        parser.error("T5-T16 are joint-space paths; Cartesian options are unsupported")
     if args.gripper_type == "mdpg_1s1":
         if args.mdpg_mount_xyz is None or args.mdpg_mount_rpy is None:
             parser.error("mDPG mount is TODO; provide measured --mdpg-mount-xyz and --mdpg-mount-rpy")
@@ -150,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
                     "movement_commands_sent": 0,
                     "gripper_type": args.gripper_type,
                 }
-                if args.gripper_type in ("ag145", "mdpg_1s1") or trajectory_id in DYNAMICS10_IDS:
+                if args.gripper_type in ("ag145", "mdpg_1s1") or trajectory_id in EXCITATION_IDS:
                     from .simulation_executor import MujocoObserver
                     if args.gripper_type == "ag145":
                         from .ag145_model import AG145_MASS_KG, AG145_TCP_OFFSET_MM, build_ag145_scene
@@ -176,10 +176,12 @@ def main(argv: list[str] | None = None) -> int:
                     if is_joint_trajectory(trajectory_id):
                         plot_options["planned_xyz_mm"] = [observer.tcp_mm(point.q_rad)
                                                             for point in plan.points]
-                    if trajectory_id in DYNAMICS10_IDS:
+                    if trajectory_id in EXCITATION_IDS:
                         from .dynamics10_safety import validate_joint_plan
                         preview_details["preflight"] = validate_joint_plan(plan, observer)
-                        preview_details["dynamics10"] = excitation_metadata(trajectory_id)
+                        preview_details["excitation"] = excitation_metadata(trajectory_id)
+                        if trajectory_id in DYNAMICS10_IDS:
+                            preview_details["dynamics10"] = preview_details["excitation"]
                         preview_details["trajectory_kind"] = "joint"
                         preview_details["execution_success"] = True
                         preview_details["sample_count"] = 0

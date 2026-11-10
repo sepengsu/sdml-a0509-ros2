@@ -14,7 +14,9 @@ JOINT_NAMES = tuple(f"joint_{i}" for i in range(1, 7))
 DEFAULT_SIZES_MM = {"T1": (120.0, 0.0, 0.0), "T2": (0.0, 80.0, 60.0), "T3": (120.0, 80.0, 60.0)}
 CARTESIAN_IDS = ("T1", "T2", "T3")
 DYNAMICS10_IDS = tuple(f"T{i}" for i in range(5, 15))
-JOINT_IDS = ("T4", *DYNAMICS10_IDS)
+EXTENDED_IDS = ("T15", "T16")
+EXCITATION_IDS = (*DYNAMICS10_IDS, *EXTENDED_IDS)
+JOINT_IDS = ("T4", *EXCITATION_IDS)
 TRAJECTORY_IDS = (*CARTESIAN_IDS, *JOINT_IDS)
 BASE_HOME = (-0.5, -0.5, 1.6, 0.0, -0.6, 0.0)
 
@@ -53,6 +55,23 @@ EXCITATIONS = {
             "components": ((1, 5.0, .18, .18, .3, 0., 5.), (3, 5.0, .24, .24, .9, 5., 10.),
                            (0, 4.0, .16, .16, .2, 10., 15.), (4, 4.0, .28, .28, 1.1, 10., 15.),
                            (5, 3.0, .35, .35, 1.6, 10., 15.))},
+    # New A0509 coverage designs inspired by the paper's state-space argument;
+    # these are not trajectories specified or validated by Zhang et al.
+    "T15": {"name": "low-speed reversals", "duration": 16.0, "split": "train",
+            "components": ((0, 2.0, .050, .050, .1, 0., 8.),
+                           (1, 2.0, .060, .060, .8, 0., 8.),
+                           (2, 2.0, .070, .070, .4, 8., 16.),
+                           (3, 1.5, .055, .055, 1.1, 8., 16.),
+                           (4, 1.5, .080, .080, .3, 0., 16.),
+                           (5, 1.5, .065, .065, 1.4, 0., 16.))},
+    "T16": {"name": "held-out posture coupled chirp", "duration": 18.0, "split": "test",
+            "home": (-.25, -.72, 1.25, .18, -.40, .12),
+            "components": ((0, 4.0, .11, .25, .2, 0., 18.),
+                           (1, 4.0, .08, .22, .9, 0., 18.),
+                           (2, 3.0, .14, .28, 1.5, 0., 18.),
+                           (3, 3.0, .12, .30, .4, 0., 18.),
+                           (4, 3.0, .16, .32, 1.0, 0., 18.),
+                           (5, 2.0, .18, .34, 1.8, 0., 18.))},
 }
 EXCITATION_SEED = 20261110  # no stochastic sample is drawn in this version
 
@@ -267,7 +286,7 @@ def generate(config: TrajectoryConfig) -> TrajectoryPlan:
                                ddq_rad_s2=scaled(point.ddq_rad_s2, factor * factor))
                        for index, point in enumerate(unscaled.points))
         return TrajectoryPlan(config, points, unscaled.waypoint_indices)
-    if config.trajectory_id in DYNAMICS10_IDS:
+    if config.trajectory_id in EXCITATION_IDS:
         return _generate_excitation(config)
     joint = is_joint_trajectory(config.trajectory_id)
     waypoints = _joint_waypoints(config) if joint else _cartesian_waypoints(config)

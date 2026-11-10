@@ -57,9 +57,10 @@ def test_all_campaign_trajectories_preflight_for_each_tool(scenes):
     for condition, gripper, _mass in CONDITIONS:
         site = "mdpg_tcp" if gripper == "mdpg_1s1" else "ag145_tcp"
         observer = MujocoObserver(scenes[condition], tcp_site=site)
-        for number in range(1, 15):
+        for number in range(1, 17):
             plan, targets, _tcp, velocity, acceleration = _plan(observer, f"T{number}")
             assert len(plan.points) == len(targets)
+            assert abs(plan.points[-1].time_s - (len(plan.points) - 1) / 100) < 1e-8
             for sample in range(0, len(plan.points), 10):
                 observer._set_state(targets[sample], velocity[sample], acceleration[sample])
                 mj.mj_inverse(observer.model, observer.data)

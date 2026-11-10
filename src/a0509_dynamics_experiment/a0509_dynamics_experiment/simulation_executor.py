@@ -17,7 +17,7 @@ import time
 
 from .dataset_exporter import create_trial, save_dynamics, save_metadata, save_trajectory
 from .dynamics_logger import DynamicsRecorder, TORQUE_DEFINITIONS
-from .trajectory_generator import (DYNAMICS10_IDS, JOINT_NAMES, TrajectoryConfig,
+from .trajectory_generator import (DYNAMICS10_IDS, EXCITATION_IDS, JOINT_NAMES, TrajectoryConfig,
                                    excitation_metadata, generate, is_joint_trajectory)
 from .dynamics10_safety import (ACCELERATION_LIMITS, POSITION_LIMITS,
                                 VELOCITY_LIMITS, validate_joint_plan)
@@ -412,7 +412,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                                                         else "ag145_tcp"))
         start_q = latest["q"]
         preflight = None
-        if config.trajectory_id in DYNAMICS10_IDS:
+        if config.trajectory_id in EXCITATION_IDS:
             plan = generate(config)
             preflight = validate_joint_plan(plan, observer)
             start_q = _prepare_joint_home(node, publisher, latest, launch, config.sample_hz,
@@ -430,7 +430,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             else:
                 config = replace(config, reference_tcp_mm=measured_reference)
         plan = generate(config)
-        if config.trajectory_id in DYNAMICS10_IDS:
+        if config.trajectory_id in EXCITATION_IDS:
             preflight = validate_joint_plan(plan, observer)
         targets = []
         planned_tcp = []
@@ -545,11 +545,12 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             "acceleration_filter_samples": 5,
             "trajectory_kind": "joint" if is_joint_trajectory(config.trajectory_id) else "cartesian",
             "dynamics10": excitation_metadata(config.trajectory_id) if config.trajectory_id in DYNAMICS10_IDS else None,
+            "excitation": excitation_metadata(config.trajectory_id) if config.trajectory_id in EXCITATION_IDS else None,
             "preflight": preflight,
             "execution_success": True,
             "sample_count": len(recorder.rows),
             "sim_initialization": ("Joint experiment start posture reached by a 6 s quintic setup move, checked for contact; setup is outside recorded trajectory"
-                                   if config.trajectory_id in DYNAMICS10_IDS else
+                                   if config.trajectory_id in EXCITATION_IDS else
                                    "Cartesian trials first move the simulator to (-0.5, -0.5, 1.6, 0, -0.6, 0) rad; setup is outside recorded trajectory"),
             "torque_definitions": TORQUE_DEFINITIONS,
             "validation": "IK position/orientation convergence and conservative joint limits; no physical robot involved",

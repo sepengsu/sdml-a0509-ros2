@@ -2,7 +2,7 @@ import pytest
 
 from a0509_dynamics_experiment.dynamics10_safety import validate_joint_plan
 from a0509_dynamics_experiment.trajectory_generator import (
-    DYNAMICS10_IDS, EXCITATIONS, TrajectoryConfig, generate,
+    DYNAMICS10_IDS, EXCITATIONS, EXTENDED_IDS, TrajectoryConfig, generate,
 )
 from a0509_dynamics_experiment.simulation_executor import SimTimeVelocityFilter
 from a0509_dynamics_experiment.run_experiment import main
@@ -30,6 +30,8 @@ def test_split_and_shifted_postures():
     assert [EXCITATIONS[i]["split"] for i in DYNAMICS10_IDS] == ["train"]*7 + ["validation"] + ["test"]*2
     assert generate(TrajectoryConfig("T13")).points[0].q_rad != generate(TrajectoryConfig("T14")).points[0].q_rad
     assert generate(TrajectoryConfig("T13")).points[0].q_rad != generate(TrajectoryConfig("T10")).points[0].q_rad
+    assert [EXCITATIONS[i]["split"] for i in EXTENDED_IDS] == ["train", "test"]
+    assert generate(TrajectoryConfig("T15")).points[0].q_rad != generate(TrajectoryConfig("T16")).points[0].q_rad
 
 
 def test_sim_time_acceleration_filter_rejects_duplicate_stamp():
@@ -43,6 +45,9 @@ def test_sim_time_acceleration_filter_rejects_duplicate_stamp():
 def test_new_joint_cli_is_simulation_only_and_batch_dispatches(monkeypatch, tmp_path):
     with pytest.raises(SystemExit):
         main(["--trajectory", "T5"])
+    for trajectory_id in EXTENDED_IDS:
+        with pytest.raises(SystemExit):
+            main(["--trajectory", trajectory_id, "--execute"])
     from a0509_dynamics_experiment import dynamics10_dataset, simulation_executor, real_executor
     calls = []
     monkeypatch.setattr(simulation_executor, "execute", lambda config, *a, **k: calls.append(config.trajectory_id) or tmp_path)

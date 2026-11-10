@@ -12,7 +12,7 @@ T4:
   name: Joint Excitation
   amplitude_deg: 5
   default_mode: sequential
-# T5-T14 definitions are implemented in trajectory_generator.EXCITATIONS.
+# T5-T16 definitions are implemented in trajectory_generator.EXCITATIONS.
 # All are joint-space, 100 Hz, 1 s pre/post hold, C2 quintic envelopes.
 # Frequencies, phase, and per-joint amplitudes are saved in each trial metadata.
 dynamics10:

@@ -1,13 +1,15 @@
 <#
 One headless MuJoCo world with up to 16 A0509 lanes. Simulation only.
-2x2 T5 pilot is a required gate for the 4x4, 7-condition campaign.
+The 2x2 pilot is required for each campaign before full 4x4 collection.
 #>
 param(
     [switch]$Pilot,
     [switch]$Play,
     [switch]$Status,
-    [ValidateSet('all','T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12','T13','T14')][string]$Trajectory = 'all',
+    [ValidateSet('legacy','trajectory16')][string]$Campaign = 'legacy',
+    [ValidateSet('all','T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12','T13','T14','T15','T16')][string]$Trajectory = 'all',
     [ValidateRange(1,2)][int]$MaxBatches = 2,
+    [ValidateRange(1,21)][int]$MaxRuns = 21,
     [string]$ResultsName = 'grid_4x4_7conditions',
     [string]$BaseContainer = 'a0509-dynamics',
     [switch]$UseCadFaceCenterFixture,
@@ -16,6 +18,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if ($Campaign -eq 'trajectory16' -and -not $PSBoundParameters.ContainsKey('ResultsName')) {
+    $ResultsName = 'grid_16_trajectories'
+}
+if ($Campaign -eq 'trajectory16' -and $Trajectory -ne 'all') {
+    throw 'The trajectory16 campaign assigns T1-T16 to all 16 lanes; use -Trajectory all.'
+}
 if ($ResultsName -notmatch '^[A-Za-z0-9_-]+$') { throw 'ResultsName must use letters, digits, _ or -.' }
 if ($BaseContainer -notmatch '^[A-Za-z0-9_.-]+$') { throw 'BaseContainer has unsupported characters.' }
 if (([int][bool]$Pilot + [int][bool]$Play + [int][bool]$Status) -gt 1) { throw 'Choose one of -Pilot, -Play, -Status.' }
@@ -29,6 +37,7 @@ if ($Status) {
         Write-Host "Pilot pass: $($pilotData.pass); max error: $($pilotData.max_tracking_error_rad) rad; elapsed: $($pilotData.wall_seconds) s"
     } else { Write-Host 'Pilot report: absent' }
     $finished = 0
+    $sceneGroups = @{}
     foreach ($file in @(Get-ChildItem -LiteralPath (Join-Path $root 'simulation') -Recurse -Filter metadata.json -File -ErrorAction SilentlyContinue)) {
         try {
             $item = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
@@ -36,10 +45,20 @@ if ($Status) {
             if ($item.report.max_tracking_error_rad -le 0.05 -and $item.report.torque_limit_samples -eq 0 -and
                 $item.report.cross_robot_contacts -eq 0 -and
                 (Test-Path -LiteralPath $bagMetadata) -and
-                (Test-Path -LiteralPath (Join-Path $file.DirectoryName 'dynamics.csv'))) { $finished++ }
+                (Test-Path -LiteralPath (Join-Path $file.DirectoryName 'dynamics.csv'))) {
+                $finished++
+                $key = "$($item.condition_id)|$($item.trial_id)"
+                if (-not $sceneGroups.ContainsKey($key)) { $sceneGroups[$key] = @{} }
+                $sceneGroups[$key][$item.trajectory_id] = $true
+            }
         } catch { }
     }
-    Write-Host "Full trials complete: $finished/294"
+    $total = if ($Campaign -eq 'trajectory16') { 336 } else { 294 }
+    Write-Host "Full trials complete: $finished/$total"
+    if ($Campaign -eq 'trajectory16') {
+        $scenesComplete = @($sceneGroups.Values | Where-Object { $_.Count -eq 16 }).Count
+        Write-Host "Scene executions complete: $scenesComplete/21"
+    }
     & docker ps -a --filter "name=^/$name`$" --format 'table {{.Names}}\t{{.Status}}'
     if ($LASTEXITCODE -ne 0) { throw 'Docker status failed.' }
     return
@@ -124,7 +143,7 @@ try {
     & docker exec $BaseContainer bash -lc $build
     if ($LASTEXITCODE -ne 0) { throw 'ROS2 package build failed.' }
     $mode = if ($Pilot) { '--pilot' } else { '--play' }
-    $command = "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && exec python3 -u -m a0509_dynamics_experiment.grid_simulation --results /ros2_ws/results/$ResultsName --mount-xyz $($MdpgMountXyz -join ' ') --mount-rpy $($MdpgMountRpy -join ' ') --payload-spec /ros2_ws/src/a0509_dynamics_experiment/config/payload_conditions.json $mode --trajectory $Trajectory --max-batches $MaxBatches"
+    $command = "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && exec python3 -u -m a0509_dynamics_experiment.grid_simulation --results /ros2_ws/results/$ResultsName --mount-xyz $($MdpgMountXyz -join ' ') --mount-rpy $($MdpgMountRpy -join ' ') --payload-spec /ros2_ws/src/a0509_dynamics_experiment/config/payload_conditions.json $mode --campaign $Campaign --trajectory $Trajectory --max-batches $MaxBatches --max-runs $MaxRuns"
     $oldContainer = @(& docker ps -a --filter "name=^/$name`$" --format '{{.Names}}')
     if ($oldContainer.Count) {
         & docker rm $name | Out-Null
@@ -141,7 +160,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Could not start grid collector.' }
     Write-Host "Started $mode in $name. Output: $root"
     Write-Host "Monitor: docker logs -f $name"
-    Write-Host "Status:  .\scripts\play_grid_dataset.ps1 -Status -ResultsName $ResultsName"
+    Write-Host "Status:  .\scripts\play_grid_dataset.ps1 -Campaign $Campaign -Status -ResultsName $ResultsName"
 } finally {
     $mutex.ReleaseMutex()
     $mutex.Dispose()

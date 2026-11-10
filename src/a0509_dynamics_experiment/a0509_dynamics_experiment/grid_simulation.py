@@ -21,7 +21,7 @@ from .dynamics10_safety import (ACCELERATION_LIMITS, POSITION_LIMITS,
 from .dynamics_logger import DynamicsRecorder, TORQUE_DEFINITIONS
 from .payload_model import attach_payload, load_payload_spec
 from .simulation_executor import MujocoObserver
-from .trajectory_generator import (BASE_HOME, JOINT_NAMES, TrajectoryConfig,
+from .trajectory_generator import (BASE_HOME, EXCITATIONS, JOINT_NAMES, TrajectoryConfig,
                                    generate, is_joint_trajectory)
 from .trajectory_visualizer import save_dynamics_plot, save_trajectory_plot
 
@@ -40,7 +40,7 @@ TORQUE_LIMITS_NM = (194.0, 194.0, 163.0, 50.0, 50.0, 50.0)
 GRID_TIME_SCALE = {"T1": 1.0, "T2": 3.0, "T3": 1.5, "T4": 1.25,
                    "T5": 1.25, "T6": 2.25, "T7": 2.75, "T8": 2.5,
                    "T9": 2.0, "T10": 2.0, "T11": 1.75, "T12": 2.25,
-                   "T13": 2.0, "T14": 2.5}
+                   "T13": 2.0, "T14": 2.5, "T15": 1.0, "T16": 2.25}
 
 
 def _arm_scene() -> Path:
@@ -281,11 +281,13 @@ def _physics(mj, model, data, inverse_data, lane, full_mass):
     }
 
 
-def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajectory_id: str,
+def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajectory_id: str | None,
                   batch_index: int, columns: int, pilot: bool = False) -> dict:
     import mujoco as mj
     import numpy as np
-    scene = build_grid_scene(scenes, lanes, root / "models" / f"batch_{batch_index:02d}.xml", columns)
+    model_name = (f"batch_{batch_index:02d}.xml" if trajectory_id else
+                  f"parallel_{lanes[0]['condition']}_trial_{lanes[0]['repeat']:03d}.xml")
+    scene = build_grid_scene(scenes, lanes, root / "models" / model_name, columns)
     model = mj.MjModel.from_xml_path(str(scene))
     if abs(model.opt.timestep - 0.002) > 1e-9:
         raise RuntimeError(f"expected 0.002 s MuJoCo timestep; got {model.opt.timestep}")
@@ -293,18 +295,23 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
     plan_cache = {}
     for lane in lanes:
         _lane_ids(mj, model, lane)
-        if lane["condition"] not in plan_cache:
+        lane["trajectory_id"] = lane.get("trajectory", trajectory_id)
+        if lane["trajectory_id"] is None:
+            raise ValueError("each mixed lane needs a trajectory ID")
+        cache_key = (lane["condition"], lane["trajectory_id"])
+        if cache_key not in plan_cache:
             tool = "mdpg_tcp" if lane["gripper"] == "mdpg_1s1" else "ag145_tcp"
             observer = MujocoObserver(scenes[lane["condition"]], tcp_site=tool)
-            plan_cache[lane["condition"]] = _plan(observer, trajectory_id)
+            plan_cache[cache_key] = _plan(observer, lane["trajectory_id"])
         (lane["plan"], lane["targets"], lane["planned_tcp"],
-         lane["target_dq"], lane["target_ddq"]) = plan_cache[lane["condition"]]
-        lane["recorder"] = DynamicsRecorder("simulation", trajectory_id,
+         lane["target_dq"], lane["target_ddq"]) = plan_cache[cache_key]
+        lane["recorder"] = DynamicsRecorder("simulation", lane["trajectory_id"],
                                             f"trial_{lane['repeat']:03d}", lane["gripper"],
                                             lane["payload_kg"], max_age_s=1.0)
-    count = len(lanes[0]["plan"].points)
-    if any(len(lane["plan"].points) != count for lane in lanes):
-        raise RuntimeError("lane trajectory lengths differ; shared /clock cannot represent them")
+        lane["max_tracking_error_rad"] = 0.0
+    count = max(len(lane["plan"].points) for lane in lanes)
+    if trajectory_id is not None and any(len(lane["plan"].points) != count for lane in lanes):
+        raise RuntimeError("same-trajectory lanes have different durations")
     for lane in lanes:
         for i, q in zip(lane["qpos"], lane["targets"][0]):
             data.qpos[i] = q
@@ -313,7 +320,9 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
     mj.mj_forward(model, data)
     if data.ncon:
         raise RuntimeError(f"grid starts with {data.ncon} contacts")
-    bag = root / "bags" / f"batch_{batch_index:02d}" / trajectory_id / f"run_{int(time.time())}"
+    bag_group = ((Path(f"batch_{batch_index:02d}") / trajectory_id) if trajectory_id else
+                 (Path(lanes[0]["condition"]) / f"trial_{lanes[0]['repeat']:03d}"))
+    bag = root / "bags" / bag_group / f"run_{int(time.time())}"
     bag.parent.mkdir(parents=True, exist_ok=True)
     writer = _bag_writer(bag)
     max_error, max_command, cross_contacts, torque_limit_samples = 0.0, 0.0, 0, 0
@@ -322,7 +331,8 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
     started = time.monotonic()
     for sample in range(count):
         for lane in lanes:
-            lane["target"] = lane["targets"][sample]
+            lane["sample_index"] = min(sample, len(lane["plan"].points) - 1)
+            lane["target"] = lane["targets"][lane["sample_index"]]
         if sample:
             # Compute desired generalized force from the same assembled model.
             feedforward_data.qpos[:] = data.qpos
@@ -332,12 +342,12 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
                 for j, addr in enumerate(lane["qpos"]):
                     feedforward_data.qpos[addr] = lane["target"][j]
                 for j, addr in enumerate(lane["dof"]):
-                    feedforward_data.qvel[addr] = lane["target_dq"][sample, j]
-                    feedforward_data.qacc[addr] = lane["target_ddq"][sample, j]
+                    feedforward_data.qvel[addr] = lane["target_dq"][lane["sample_index"], j]
+                    feedforward_data.qacc[addr] = lane["target_ddq"][lane["sample_index"], j]
             mj.mj_forward(model, feedforward_data)
             for lane in lanes:
                 for j, addr in enumerate(lane["dof"]):
-                    feedforward_data.qacc[addr] = lane["target_ddq"][sample, j]
+                    feedforward_data.qacc[addr] = lane["target_ddq"][lane["sample_index"], j]
             mj.mj_inverse(model, feedforward_data)
             for _ in range(5):
                 for lane in lanes:
@@ -348,7 +358,7 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
                     for j, (qaddr, daddr, act) in enumerate(zip(lane["qpos"], lane["dof"], lane["act"])):
                         desired = (feedforward_data.qfrc_inverse[daddr]
                                    + 150 * (lane["target"][j] - data.qpos[qaddr])
-                                   + 20 * (lane["target_dq"][sample, j] - data.qvel[daddr]))
+                                   + 20 * (lane["target_dq"][lane["sample_index"], j] - data.qvel[daddr]))
                         max_command = max(max_command, abs(float(desired)))
                         max_command_by_joint[j] = max(max_command_by_joint[j], abs(float(desired)))
                         if abs(desired) > TORQUE_LIMITS_NM[j]:
@@ -366,12 +376,12 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
                         n2 = mj.mj_id2name(model, mj.mjtObj.mjOBJ_BODY, b2) or ""
                         if n1[:4] != n2[:4] and n1.startswith("r") and n2.startswith("r"):
                             cross_contacts += 1
-                    raise RuntimeError(f"MuJoCo contact during {trajectory_id} sample {sample}")
+                    raise RuntimeError(f"MuJoCo contact during {trajectory_id or 'mixed'} sample {sample}")
         # mj_step integrates qpos/qvel after computing derived arrays. Refresh
         # FK, bias, mass and actuator force for the state saved in this row.
         mj.mj_forward(model, data)
         if data.ncon:
-            raise RuntimeError(f"MuJoCo contact at saved {trajectory_id} sample {sample}")
+            raise RuntimeError(f"MuJoCo contact at saved {trajectory_id or 'mixed'} sample {sample}")
         inverse_data.qpos[:] = data.qpos
         inverse_data.qvel[:] = data.qvel
         inverse_data.ctrl[:] = data.ctrl
@@ -384,7 +394,11 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
         for lane in lanes:
             q = [float(data.qpos[i]) for i in lane["qpos"]]
             dq = [float(data.qvel[i]) for i in lane["dof"]]
-            max_error = max(max_error, max(abs(q[j] - lane["target"][j]) for j in range(6)))
+            error = max(abs(q[j] - lane["target"][j]) for j in range(6))
+            max_error = max(max_error, error)
+            lane["max_tracking_error_rad"] = max(lane["max_tracking_error_rad"], error)
+            if sample >= len(lane["plan"].points):
+                continue  # shorter trajectory holds its final command in the shared scene
             recorder = lane["recorder"]
             recorder.ingest_joint_state(JOINT_NAMES, q, dq, arrival_s=sim_s,
                                         source_time_s=sim_s + 1e-6)
@@ -394,7 +408,9 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
     del writer
     if not (bag / "metadata.yaml").is_file():
         raise RuntimeError("shared ROS bag did not finalize")
-    report = {"samples": count, "lanes": len(lanes), "trajectory": trajectory_id,
+    report = {"samples": count, "lanes": len(lanes), "trajectory": trajectory_id or "mixed",
+              "trajectory_samples": {lane["trajectory_id"]: len(lane["plan"].points) for lane in lanes},
+              "trajectory_max_tracking_error_rad": {lane["trajectory_id"]: lane["max_tracking_error_rad"] for lane in lanes},
               "max_tracking_error_rad": max_error, "max_command_nm": max_command,
               "max_command_nm_by_joint": max_command_by_joint,
               "torque_limit_samples": torque_limit_samples,
@@ -405,7 +421,8 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
     if max_error > 0.05 or torque_limit_samples:
         raise RuntimeError(f"grid quality gate failed: {json.dumps(report)}")
     for lane in lanes:
-        folder = root / "simulation" / trajectory_id / lane["condition"] / f"trial_{lane['repeat']:03d}"
+        lane_trajectory = lane["trajectory_id"]
+        folder = root / "simulation" / lane_trajectory / lane["condition"] / f"trial_{lane['repeat']:03d}"
         folder.mkdir(parents=True, exist_ok=True)
         save_trajectory(lane["plan"], folder)
         save_dynamics(lane["recorder"].rows, folder)
@@ -413,22 +430,30 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
         measured_joint = [tuple(row[f"q{i}"] for i in range(1, 7)) for row in lane["recorder"].rows]
         save_trajectory_plot(lane["plan"], folder, measured_xyz_mm=measured,
                              measured_joint_rad=measured_joint,
-                             measured_time_s=[i / 100 for i in range(count)],
-                             planned_xyz_mm=lane["planned_tcp"] if is_joint_trajectory(trajectory_id) else None)
+                             measured_time_s=[i / 100 for i in range(len(lane["plan"].points))],
+                             planned_xyz_mm=lane["planned_tcp"] if is_joint_trajectory(lane_trajectory) else None)
         save_dynamics_plot(lane["recorder"].rows, folder)
         save_metadata(folder, lane["plan"], "simulation", f"trial_{lane['repeat']:03d}", {
             "condition_id": lane["condition"], "gripper_type": lane["gripper"],
             "payload_mass_kg": lane["payload_kg"], "quality": lane["recorder"].quality(),
+            "dataset_split": EXCITATIONS[lane_trajectory]["split"] if lane_trajectory in EXCITATIONS else "diagnostic",
             "physics_source": "direct MuJoCo state in one isolated multi-robot MjModel",
+            "sim_initialization": "Each lane qpos is set to its own first target before the first sample; no setup movement is recorded.",
+            "trajectory_design_origin": ("A0509 project extension motivated by state-space coverage in Zhang et al., 2026; not a trajectory specified by that paper"
+                                         if lane_trajectory in ("T15", "T16") else
+                                         "existing A0509 project trajectory; not a trajectory specified by Zhang et al., 2026"),
+            "study_reference_doi": "10.1016/j.knosys.2026.116861",
             "controller": "inverse-dynamics feedforward plus 150 Nm/rad position and 20 Nm s/rad velocity feedback, clipped to MJCF joint force limits; qfrc_applied stores external controller effort",
             "torque_definitions": TORQUE_DEFINITIONS,
             "time_sync": "sample index / 100 Hz is MuJoCo time; wall timestamp is recorded separately",
-            "target_joint_derivative_method": "T1-T3: 51-sample fifth-order Savitzky-Golay derivative of precise IK targets; T4-T14: analytic joint trajectory derivatives",
-            "grid_time_scale": GRID_TIME_SCALE[trajectory_id],
+            "target_joint_derivative_method": "T1-T3: 51-sample fifth-order Savitzky-Golay derivative of precise IK targets; T4-T16: analytic joint trajectory derivatives",
+            "grid_time_scale": GRID_TIME_SCALE[lane_trajectory],
             "rosbag": str(bag), "rosbag_relative_path": bag.relative_to(root).as_posix(),
             "rosbag_topics": ["/clock", "/joint_states", "/target_joint_states"],
             "grid": {"batch": batch_index, "lane": lane["prefix"], "base_xy_m": lane["base_xy_m"],
-                     "spacing_m": 2.5, "simulation_layout_only": True},
+                     "spacing_m": 2.5, "simulation_layout_only": True,
+                     "simultaneous_trajectories": trajectory_id is None,
+                     "shared_scene_duration_s": (count - 1) / 100.0},
             "limitations": "Tool attachment and payload are fixed; no grasp, suction or pneumatic IO model. This is a distinct direct-MuJoCo controller/data source from the ROS bridge campaign.",
             "report": report,
         })
@@ -443,11 +468,17 @@ def main(argv=None):
     parser.add_argument("--payload-spec", type=Path, required=True)
     parser.add_argument("--pilot", action="store_true")
     parser.add_argument("--play", action="store_true")
+    parser.add_argument("--campaign", choices=("legacy", "trajectory16"), default="legacy")
     parser.add_argument("--max-batches", type=int, default=2)
-    parser.add_argument("--trajectory", choices=("all", *(f"T{i}" for i in range(1, 15))), default="all")
+    parser.add_argument("--max-runs", type=int, default=21)
+    parser.add_argument("--trajectory", choices=("all", *(f"T{i}" for i in range(1, 17))), default="all")
     args = parser.parse_args(argv)
     if args.pilot == args.play:
         parser.error("choose exactly one of --pilot or --play")
+    if args.campaign == "trajectory16" and args.trajectory != "all":
+        parser.error("trajectory16 always assigns T1-T16 to the 16 lanes")
+    if args.max_runs < 1 or args.max_runs > 21:
+        parser.error("max-runs must be between 1 and 21")
     if not all(math.isfinite(v) for v in (*args.mount_xyz, *args.mount_rpy)):
         parser.error("mount values must be finite")
     root = args.results.resolve()
@@ -460,19 +491,27 @@ def main(argv=None):
         fingerprint_hash.update(path.read_bytes())
     fingerprint = fingerprint_hash.hexdigest()
     if args.pilot:
-        lanes = [dict(condition=c, gripper=g, payload_kg=p, repeat=1)
-                 for c, g, p in (CONDITIONS[0], CONDITIONS[2], CONDITIONS[4], CONDITIONS[6])]
-        report = collect_batch(root / "pilot", scenes, lanes, "T5", 0, 2, pilot=True)
+        if args.campaign == "trajectory16":
+            c, g, p = CONDITIONS[2]  # mixed-duration pilot with one tool/payload condition
+            lanes = [dict(condition=c, gripper=g, payload_kg=p, repeat=1, trajectory=t)
+                     for t in ("T1", "T5", "T15", "T16")]
+            report = collect_batch(root / "pilot", scenes, lanes, None, 0, 2, pilot=True)
+        else:
+            lanes = [dict(condition=c, gripper=g, payload_kg=p, repeat=1)
+                     for c, g, p in (CONDITIONS[0], CONDITIONS[2], CONDITIONS[4], CONDITIONS[6])]
+            report = collect_batch(root / "pilot", scenes, lanes, "T5", 0, 2, pilot=True)
         report["pass"] = (report["max_tracking_error_rad"] <= 0.05
                           and report["cross_robot_contacts"] == 0
                           and report["torque_limit_samples"] == 0)
         report["fingerprint"] = fingerprint
+        report["campaign"] = args.campaign
         (root / "pilot_report.json").write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps(report, indent=2), flush=True)
         return 0 if report["pass"] else 2
     report_path = root / "pilot_report.json"
     if (not report_path.is_file() or not json.loads(report_path.read_text()).get("pass")
-            or json.loads(report_path.read_text()).get("fingerprint") != fingerprint):
+            or json.loads(report_path.read_text()).get("fingerprint") != fingerprint
+            or json.loads(report_path.read_text()).get("campaign", "legacy") != args.campaign):
         raise RuntimeError("2x2 pilot must pass before 4x4 collection")
     shards = [dict(condition=c, gripper=g, payload_kg=p, repeat=repeat)
               for c, g, p in CONDITIONS for repeat in range(1, 4)]
@@ -491,6 +530,22 @@ def main(argv=None):
                     and report["cross_robot_contacts"] == 0)
         except (KeyError, ValueError, OSError, TypeError):
             return False
+    if args.campaign == "trajectory16":
+        runs = [(c, g, p, repeat) for c, g, p in CONDITIONS for repeat in range(1, 4)]
+        for run_index, (condition, gripper, payload, repeat) in enumerate(runs):
+            if run_index >= args.max_runs:
+                break
+            lanes = [dict(condition=condition, gripper=gripper, payload_kg=payload,
+                          repeat=repeat, trajectory=f"T{i}") for i in range(1, 17)]
+            folders = [root / "simulation" / lane["trajectory"] / condition /
+                       f"trial_{repeat:03d}" for lane in lanes]
+            if all(complete(folder) for folder in folders):
+                print(f"skip complete scene {run_index+1}/21: {condition} repeat {repeat}", flush=True)
+                continue
+            print(f"collect scene {run_index+1}/21: {condition} repeat {repeat}, T1-T16 in parallel", flush=True)
+            report = collect_batch(root, scenes, lanes, None, run_index, 4)
+            print(json.dumps(report), flush=True)
+        return 0
     for batch_index, start in enumerate(range(0, len(shards), 16)):
         if batch_index >= args.max_batches:
             break

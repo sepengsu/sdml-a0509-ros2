@@ -260,6 +260,47 @@ Bag 기록 시간이 추가됩니다. 원본 ROS bridge 데이터와 시간 이�
 `bags/batch_00/T1/...` 등에 저장합니다. 실패한 궤적은 완료 metadata가
 없어 재실행 시 다시 시도합니다. `-Status`는 294개 중 완료 수를 표시합니다.
 
+## 16개 서로 다른 궤적을 동시에 수집하는 캠페인
+
+`-Campaign trajectory16`은 **한 조건의 A0509 16대**에 T1~T16을 하나씩
+배정합니다. 7개 gripper/payload 조건을 각각 3회 반복하므로 **장면 실행은
+21회**, 궤적별 결과는 **336개(21×16)**입니다. 한 장면의 `/clock`과 ROS Bag을
+공유하되 각 trial의 CSV는 해당 궤적이 끝날 때까지만 기록하고, 먼저 끝난
+로봇은 마지막 목표 자세를 유지합니다. 모든 궤적은 100 Hz입니다. 기존
+294-trial 캠페인과 결과 폴더를 분리합니다.
+
+T15는 J1~J6의 저속·방향 반전 구간을 늘려 저속 동역학을 살펴보는 신규
+설계입니다. T16은 다른 시작 자세에서 6축 chirp를 결합한 독립 시험
+궤적입니다. T1~T14의 기하와 T15~T16의 명세는 코드와 각 `trajectory.json`에
+보존합니다. T1~T4는 diagnostic, T5~T11/T15는 train, T12는 validation,
+T13/T14/T16은 test로 두며,
+반복 샘플을 무작위로 train/test에 나누지 않습니다.
+MuJoCo 모델·초기 자세·제어 입력을 반복마다 동일하게 두므로 세 번의
+시뮬레이션은 사실상 결정론적 복제입니다. 이를 독립적인 상태공간 확장으로
+계산하지 말고, 학습 시 동일 조건·궤적의 반복을 한 그룹으로 취급합니다.
+
+[Zhang·Chen·Zhang (2026)](https://www.sciencedirect.com/science/article/pii/S095070512601587X)은
+상태공간 범위와 시뮬레이션에서 실로봇으로의 전이학습을 강조합니다.
+**T1~T16은 이 프로젝트의 A0509 설계이며 논문에서 지정한 16개 궤적이
+아닙니다.** MuJoCo 데이터만으로 sim-to-real 성능을 검증할 수 없고,
+별도 실로봇 데이터와 토크 정의 정합이 필요합니다.
+
+```powershell
+# 저장소 루트에서. 첫 실행 또는 코드/모델 변경 후 파일럿을 먼저 수행
+.\scripts\play_grid_dataset.ps1 -Campaign trajectory16 -Pilot -UseCadFaceCenterFixture
+docker logs -f a0509-grid-grid_16_trajectories
+
+# 21개 장면을 순차 실행하며 완료된 장면은 건너뜀
+.\scripts\play_grid_dataset.ps1 -Campaign trajectory16 -Play -UseCadFaceCenterFixture
+docker logs -f a0509-grid-grid_16_trajectories
+.\scripts\play_grid_dataset.ps1 -Campaign trajectory16 -Status
+```
+
+`-MaxRuns 1`은 첫 조건의 16개 궤적만 검증합니다. 전체 수집의 예상 소요
+시간은 가장 긴 T3의 약 122초 × 21장면에 모델 준비·Bag·CSV·그래프
+출력 시간이 더해진 값입니다. 16대가 같은 시간에 움직여도 각 관절의 물리
+계산은 수행하므로 GPU나 16배 속도 향상을 가정하지 않습니다.
+
 ## 안전과 검증 상태
 
 `--execute`는 요청 시에도 실제 이동 서비스를 호출하지 않습니다. 제어 권한, TCP/Tool/Payload 설정, 전체 경로의 충돌·특이점·작업 공간, 현재 자세와 시작점, 작업자 최종 승인에 관한 검증 체인이 구현·검증되기 전에는 이동을 열지 않습니다. 현재 구현은 이 항목을 미충족으로 보고 차단합니다.
