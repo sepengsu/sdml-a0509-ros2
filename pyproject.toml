@@ -1,0 +1,32 @@
+[project]
+name = "sdml-doosan-robot"
+version = "0.1.0"
+description = "A Python package for interfacing with Doosan Cobot A0509."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["pymodbus>=3.6.0", "pyserial>=3.5"]
+
+[dependency-groups]
+dev = ["pyright>=1.1.408", "ruff>=0.14.14", "iruff>=0.1.0"]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["uv_build>=0.9.28,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "dsr2"
+module-root = ""
+
+[tool.pyright]
+typeCheckingMode = "standard"
+include = ["dsr2"]
+
+[tool.ruff]
+line-length = 120
+
+[project.scripts]
+dsr2 = "dsr2.cli:main"
+dsr2-gripper = "dsr2.gripper_server:main"

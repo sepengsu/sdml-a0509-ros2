@@ -1,0 +1,242 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dsr2: Virtual",
+      "type": "shell",
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "scripts/vscode_dsr2_task.py",
+        "virtual",
+        "--build-mode",
+        "${input:dsr2BuildMode}",
+        "--detach",
+        "${input:dsr2Detach}",
+        "--gripper-option",
+        "${input:dsr2VirtualGripperOption}"
+      ],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dsr2: Real",
+      "type": "shell",
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "scripts/vscode_dsr2_task.py",
+        "real",
+        "--build-mode",
+        "${input:dsr2BuildMode}",
+        "--detach",
+        "${input:dsr2Detach}",
+        "--robot-ip",
+        "${input:dsr2RealRobotIp}",
+        "--connection-mode",
+        "${input:dsr2RealConnectionMode}",
+        "--gripper-option",
+        "${input:dsr2RealGripperOption}"
+      ],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dsr2: Gripper",
+      "type": "shell",
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "scripts/vscode_dsr2_task.py",
+        "gripper",
+        "--gripper-option",
+        "${input:dsr2GripperOption}"
+      ],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Stop All Containers",
+      "type": "shell",
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "scripts/vscode_docker_down.py",
+        "virtual",
+        "real",
+        "real-external"
+      ],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Stop Virtual",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "python", "scripts/vscode_docker_down.py", "virtual"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Stop Real",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "python", "scripts/vscode_docker_down.py", "real"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: View Logs (Virtual)",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "--profile", "virtual", "logs", "-f"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: View Logs (Real)",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "--profile", "real", "logs", "-f"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Stop Real-External",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "python", "scripts/vscode_docker_down.py", "real-external"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: View Logs (Real-External)",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "--profile", "real-external", "logs", "-f"],
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "dsr2BuildMode",
+      "type": "pickString",
+      "description": "Build mode",
+      "options": ["default", "no-build"],
+      "default": "default"
+    },
+    {
+      "id": "dsr2Detach",
+      "type": "pickString",
+      "description": "Run detached",
+      "options": ["false", "true"],
+      "default": "false"
+    },
+    {
+      "id": "dsr2VirtualGripperOption",
+      "type": "promptString",
+      "description": "Virtual gripper server option: default, mock, auto, COM3, /dev/ttyACM0",
+      "default": "default"
+    },
+    {
+      "id": "dsr2RealRobotIp",
+      "type": "promptString",
+      "description": "Robot IP. Use 'default' to keep .env value.",
+      "default": "default"
+    },
+    {
+      "id": "dsr2RealConnectionMode",
+      "type": "pickString",
+      "description": "Real mode gripper connection. 'default' keeps OS-specific dsr2 behavior.",
+      "options": ["default", "external", "direct"],
+      "default": "default"
+    },
+    {
+      "id": "dsr2RealGripperOption",
+      "type": "promptString",
+      "description": "Gripper option: default, mock, no-server, auto, COM3, /dev/ttyACM0",
+      "default": "default"
+    },
+    {
+      "id": "dsr2GripperOption",
+      "type": "promptString",
+      "description": "Gripper server option: default, mock, auto, COM3, /dev/ttyACM0",
+      "default": "default"
+    }
+  ]
+}

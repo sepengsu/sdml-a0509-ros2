@@ -1,0 +1,7 @@
+/log
+/build
+/install
+/.omc
+.env
+__pycache__/
+.dsr2/

@@ -1,0 +1,34 @@
+# python3 venv activate: DL env
+source ~/torch_ros_env/bin/activate
+
+# DSR ROS2 config install
+https://github.com/DoosanRobotics/doosan-robot2/tree/humble
+
+# motion planning lib
+sudo apt install ros-humble-ompl
+sudo apt install ros-humble-moveit-planners-ompl
+sudo apt install ros-humble-moveit-planners-chomp
+sudo apt install ros-humble-moveit-planners-pilz
+
+# Virtual/Real Robot moveit control:
+ros2 launch dsr_bringup2 dsr_bringup2_moveit.launch.py mode:=virtual model:=a0509 host:=127.0.0.1
+ros2 launch dsr_bringup2 dsr_bringup2_moveit_cyw.launch.py mode:=real model:=a0509 host:=192.168.137.100
+ros2 launch dsr_bringup2 dsr_bringup2_moveit.launch.py mode:=real model:=a0509 host:=192.168.137.100 !!!!!!!!!!!
+
+# Relative Coord Moving:
+ros2 launch dsr_bringup2 dsr_bringup2_moveit.launch.py mode:=real model:=a0509 host:=192.168.137.100
+ros2 run a0509_control_cyw ee_relative_move_action !!!!!!!!!!!
+
+# Gripper control only
+ros2 run dh_gripper_modbus gripper_controller !!!!!!!!!!!
+
+# 6D OPE, control:
+ros2 run a0509_control_cyw arm_gripper_coordinator (included in cyw launch)
+
+# sourcing
+source install/setup.bash
+source install/local_setup.bash
+
+# dh_gripper_modbus
+sudo apt update
+sudo apt install libmodbus-dev
