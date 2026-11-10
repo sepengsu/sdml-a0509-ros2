@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 from typing import Sequence
 
-from .trajectory_generator import TrajectoryPlan
+from .trajectory_generator import TrajectoryPlan, is_joint_trajectory
 from .urdf_kinematics import A0509Urdf, find_a0509_urdf
 
 
@@ -26,7 +26,7 @@ def save_trajectory_plot(plan: TrajectoryPlan, folder: Path,
                          robot_snapshots_mm: Sequence[Sequence[Sequence[float]]] | None = None,
                          planned_xyz_mm: Sequence[Sequence[float]] | None = None) -> None:
     plt = _plot()
-    joint = plan.config.trajectory_id == "T4"
+    joint = is_joint_trajectory(plan.config.trajectory_id)
     urdf_path = find_a0509_urdf()
     urdf = A0509Urdf(urdf_path) if urdf_path else None
     fig = plt.figure(figsize=(12, 7))
@@ -125,8 +125,9 @@ def save_dynamics_plot(rows: Sequence[dict], folder: Path) -> None:
     plt = _plot()
     fig, axes = plt.subplots(2, 2, figsize=(12, 7))
     if rows:
-        t0 = float(rows[0]["timestamp"])
-        time = [float(row["timestamp"]) - t0 for row in rows]
+        clock_key = "ros_time_s" if rows[0].get("mode") == "simulation" else "timestamp"
+        t0 = float(rows[0][clock_key])
+        time = [float(row[clock_key]) - t0 for row in rows]
         for i in range(1, 7):
             for ax, key, title in ((axes[0, 0], f"q{i}", "Position (rad)"),
                                    (axes[0, 1], f"dq{i}", "Velocity (rad/s)")):

@@ -17,7 +17,10 @@ import time
 
 from .dataset_exporter import create_trial, save_dynamics, save_metadata, save_trajectory
 from .dynamics_logger import DynamicsRecorder, TORQUE_DEFINITIONS
-from .trajectory_generator import JOINT_NAMES, TrajectoryConfig, generate
+from .trajectory_generator import (DYNAMICS10_IDS, JOINT_NAMES, TrajectoryConfig,
+                                   excitation_metadata, generate, is_joint_trajectory)
+from .dynamics10_safety import (ACCELERATION_LIMITS, POSITION_LIMITS,
+                                VELOCITY_LIMITS, validate_joint_plan)
 from .trajectory_visualizer import save_dynamics_plot, save_trajectory_plot
 
 
@@ -134,12 +137,17 @@ class MujocoObserver:
         velocities = tuple(float(self.data.qvel[i]) for i in self.dof_addr) if dq is not None else None
         acceleration = tuple(float(self.data.qacc[i]) for i in self.dof_addr) if ddq is not None else None
         bias = tuple(float(self.data.qfrc_bias[i]) for i in self.dof_addr)
+        full_mass = self.np.empty((self.model.nv, self.model.nv), dtype=float)
+        self.mj.mj_fullM(self.model, full_mass, self.data.qM)
+        mass_matrix = tuple(tuple(float(full_mass[i, j]) for j in self.dof_addr)
+                            for i in self.dof_addr)
         inverse = None
         if dq is not None and ddq is not None:
             self.mj.mj_inverse(self.model, self.data)
             inverse = tuple(float(self.data.qfrc_inverse[i]) for i in self.dof_addr)
         return {"qpos": positions, "qvel": velocities, "qacc": acceleration,
                 "qfrc_inverse": inverse, "qfrc_actuator": None, "qfrc_bias": bias,
+                "mass_matrix": mass_matrix,
                 "tcp_position": tuple(float(x * 1000) for x in self._tcp_pos()),
                 "body_mass": tuple(float(x) for x in self.model.body_mass),
                 "body_inertia": tuple(tuple(float(v) for v in row) for row in self.model.body_inertia),
@@ -180,12 +188,12 @@ def _markers(node, plan, planned_xyz_mm=None):
     return publisher
 
 
-def _prepare_cartesian_home(node, publisher, latest, launch, sample_hz: int, observer: MujocoObserver):
-    """Move the simulator only to a reachable reference pose before data capture."""
+def _prepare_joint_home(node, publisher, latest, launch, sample_hz: int,
+                        observer: MujocoObserver, home):
+    """Validate and move the simulator to a reachable pose before capture."""
     import rclpy
     from std_msgs.msg import Float64MultiArray
 
-    home = (-0.5, -0.5, 1.6, 0.0, -0.6, 0.0)
     deadline = time.monotonic() + 15.0
     while publisher.get_subscription_count() == 0 and time.monotonic() < deadline:
         rclpy.spin_once(node, timeout_sec=0.1)
@@ -195,7 +203,21 @@ def _prepare_cartesian_home(node, publisher, latest, launch, sample_hz: int, obs
         raise RuntimeError("MuJoCo position controller is not subscribed; no commands sent")
     origin = latest["q"]
     if max(abs(home[i] - origin[i]) for i in range(6)) < 0.03:
-        return home
+        return tuple(origin)
+    # Check the entire setup path before publishing its first point.
+    for k in range(1, int(6.0 * sample_hz) + 1):
+        u = k / (6.0 * sample_hz)
+        scale = 10 * u**3 - 15 * u**4 + 6 * u**5
+        ds = 30*u**2 - 60*u**3 + 30*u**4
+        dds = 60*u - 180*u**2 + 120*u**3
+        setup_q = [origin[i] + (home[i] - origin[i]) * scale for i in range(6)]
+        for i in range(6):
+            if not POSITION_LIMITS[i][0] <= setup_q[i] <= POSITION_LIMITS[i][1]:
+                raise RuntimeError(f"J{i+1} setup position exceeds conservative limit")
+            if (abs((home[i]-origin[i])*ds/6.0) > VELOCITY_LIMITS[i] or
+                    abs((home[i]-origin[i])*dds/36.0) > ACCELERATION_LIMITS[i]):
+                raise RuntimeError(f"J{i+1} setup velocity/acceleration exceeds conservative limit")
+        observer.require_contact_free(setup_q)
     start_ros = node.get_clock().now().nanoseconds / 1e9
     start_wall = time.monotonic()
     duration = 6.0
@@ -216,9 +238,41 @@ def _prepare_cartesian_home(node, publisher, latest, launch, sample_hz: int, obs
         if time.monotonic() > settle_wall_deadline:
             raise RuntimeError("MuJoCo clock stopped while settling at the reference pose")
         rclpy.spin_once(node, timeout_sec=0.01)
-    if latest["q"] is None or max(abs(home[i] - latest["q"][i]) for i in range(6)) > 0.05:
-        raise RuntimeError("MuJoCo did not reach the Cartesian experiment reference pose")
+    if latest["q"] is None or max(abs(home[i] - latest["q"][i]) for i in range(6)) > 0.03:
+        raise RuntimeError("MuJoCo did not reach the experiment start pose")
     return tuple(latest["q"])
+
+
+def _prepare_cartesian_home(node, publisher, latest, launch, sample_hz: int, observer):
+    return _prepare_joint_home(node, publisher, latest, launch, sample_hz, observer,
+                               (-0.5, -0.5, 1.6, 0.0, -0.6, 0.0))
+
+
+class SimTimeVelocityFilter:
+    """Least-squares acceleration from five latest unique ROS simulation stamps."""
+
+    def __init__(self, width: int = 5):
+        from collections import deque
+        self.samples = deque(maxlen=width)
+
+    def add(self, stamp_s: float, velocity) -> None:
+        if velocity is None or not math.isfinite(stamp_s):
+            return
+        if self.samples and stamp_s <= self.samples[-1][0]:
+            return
+        self.samples.append((stamp_s, tuple(velocity)))
+
+    def acceleration(self):
+        if len(self.samples) < 3:
+            return None
+        times = [item[0] for item in self.samples]
+        mean_t = sum(times) / len(times)
+        delta = [t - mean_t for t in times]
+        denom = sum(x*x for x in delta)
+        if denom <= 1e-12:
+            return None
+        return tuple(sum(delta[k] * self.samples[k][1][joint]
+                         for k in range(len(times))) / denom for joint in range(6))
 
 
 def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass: float,
@@ -267,6 +321,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
         node = Node("a0509_dynamics_simulation", parameter_overrides=[Parameter("use_sim_time", value=True)],
                     automatically_declare_parameters_from_overrides=True)
         latest = {"q": None, "dq": None, "effort": None, "arrival": None}
+        velocity_filter = SimTimeVelocityFilter()
 
         def on_joint_state(message: JointState):
             try:
@@ -275,6 +330,8 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                 latest["dq"] = ordered(message.velocity, message.name) if len(message.velocity) == len(message.name) else None
                 latest["effort"] = ordered(message.effort, message.name) if len(message.effort) == len(message.name) else None
                 latest["arrival"] = time.monotonic()
+                velocity_filter.add(message.header.stamp.sec + message.header.stamp.nanosec / 1e9,
+                                    latest["dq"])
                 recorder.ingest_joint_state(message.name, message.position, message.velocity, message.effort,
                                             arrival_s=latest["arrival"],
                                             source_time_s=message.header.stamp.sec + message.header.stamp.nanosec / 1e9)
@@ -306,7 +363,13 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             raise RuntimeError("MuJoCo position controller is not subscribed; commands blocked")
         observer = MujocoObserver(scene_path)
         start_q = latest["q"]
-        if config.trajectory_id == "T4":
+        preflight = None
+        if config.trajectory_id in DYNAMICS10_IDS:
+            plan = generate(config)
+            preflight = validate_joint_plan(plan, observer)
+            start_q = _prepare_joint_home(node, publisher, latest, launch, config.sample_hz,
+                                          observer, config.joint_start_rad)
+        elif config.trajectory_id == "T4":
             config = replace(config, joint_start_rad=start_q)
         else:
             start_q = _prepare_cartesian_home(node, publisher, latest, launch, config.sample_hz, observer)
@@ -319,6 +382,8 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             else:
                 config = replace(config, reference_tcp_mm=measured_reference)
         plan = generate(config)
+        if config.trajectory_id in DYNAMICS10_IDS:
+            preflight = validate_joint_plan(plan, observer)
         targets = []
         planned_tcp = []
         previous = start_q
@@ -337,7 +402,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                      sorted({0, len(targets) // 4, len(targets) // 2, 3 * len(targets) // 4, len(targets) - 1})]
         save_trajectory_plot(plan, folder, robot_links_mm=observer.links_mm(start_q),
                              robot_snapshots_mm=snapshots,
-                             planned_xyz_mm=planned_tcp if config.trajectory_id == "T4" else None)
+                             planned_xyz_mm=planned_tcp if is_joint_trajectory(config.trajectory_id) else None)
         if record_video:
             from .video_recorder import SimulationVideoRecorder
             video = SimulationVideoRecorder(folder / "simulation.mp4")
@@ -357,8 +422,6 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             raise RuntimeError("ROS 2 Bag or fresh joint feedback did not become ready")
         marker_publisher = _markers(node, plan, planned_tcp)
         measured = []
-        previous_dq = None
-        previous_at = None
 
         def wait_for_fresh_feedback() -> None:
             fresh_deadline = time.monotonic() + 2.0
@@ -371,9 +434,11 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
 
         wait_for_fresh_feedback()
         start_ros = node.get_clock().now().nanoseconds / 1e9
+        previous_recorded_ros = -math.inf
         for point, target in zip(plan.points, targets):
             wait_deadline = time.monotonic() + 30.0
-            while node.get_clock().now().nanoseconds / 1e9 - start_ros < point.time_s:
+            while (node.get_clock().now().nanoseconds / 1e9 - start_ros < point.time_s or
+                   node.get_clock().now().nanoseconds / 1e9 <= previous_recorded_ros):
                 if time.monotonic() > wait_deadline:
                     raise RuntimeError("MuJoCo clock stalled during trajectory execution")
                 if launch is not None and launch.poll() is not None:
@@ -386,14 +451,15 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             q = latest["q"]
             dq = latest["dq"]
             now = time.monotonic()
-            ddq = None
-            if dq is not None and previous_dq is not None and previous_at is not None and now > previous_at:
-                ddq = tuple((dq[i] - previous_dq[i]) / (now - previous_at) for i in range(6))
-            previous_dq, previous_at = dq, now
+            ddq = velocity_filter.acceleration() if dq is not None else None
             physics = observer.observe(q, dq, ddq)
             physics["qfrc_applied"] = latest["effort"]
             measured.append(physics["tcp_position"])
-            recorder.snapshot(time.time(), node.get_clock().now().nanoseconds / 1e9, target, physics, now)
+            recorded_ros = node.get_clock().now().nanoseconds / 1e9
+            if recorded_ros <= previous_recorded_ros:
+                raise RuntimeError("MuJoCo simulation time did not advance before sample")
+            recorder.snapshot(time.time(), recorded_ros, target, physics, now)
+            previous_recorded_ros = recorded_ros
         # Hold at the final target after recording ends.
         publisher.publish(Float64MultiArray(data=list(targets[-1])))
         if bag.poll() is not None:
@@ -411,7 +477,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
         save_trajectory_plot(plan, folder, measured_xyz_mm=measured,
                              measured_joint_rad=measured_joint, measured_time_s=measured_times,
                              robot_links_mm=observer.links_mm(start_q), robot_snapshots_mm=snapshots,
-                             planned_xyz_mm=planned_tcp if config.trajectory_id == "T4" else None)
+                             planned_xyz_mm=planned_tcp if is_joint_trajectory(config.trajectory_id) else None)
         save_dynamics_plot(recorder.rows, folder)
         video_info = video.stop() if video is not None else None
         video = None
@@ -424,8 +490,16 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                           if gripper_type == "ag145" else "dsr_description2/mujoco_models/a0509/scene.xml"),
             "gripper_model": gripper_model_info,
             "physics_source": "Separate MuJoCo model reconstructed from measured q/dq/ddq; qfrc_actuator unavailable from upstream bridge",
-            "acceleration_method": "finite difference of observed JointState velocity; blank if velocity unavailable",
-            "sim_initialization": "Cartesian trials first move the simulator to (-0.5, -0.5, 1.6, 0, -0.6, 0) rad; this setup move is outside the recorded trajectory",
+            "acceleration_method": "least-squares slope of up to five unique JointState velocities in ROS simulation time; blank until three samples or when velocity unavailable",
+            "acceleration_filter_samples": 5,
+            "trajectory_kind": "joint" if is_joint_trajectory(config.trajectory_id) else "cartesian",
+            "dynamics10": excitation_metadata(config.trajectory_id) if config.trajectory_id in DYNAMICS10_IDS else None,
+            "preflight": preflight,
+            "execution_success": True,
+            "sample_count": len(recorder.rows),
+            "sim_initialization": ("Joint experiment start posture reached by a 6 s quintic setup move, checked for contact; setup is outside recorded trajectory"
+                                   if config.trajectory_id in DYNAMICS10_IDS else
+                                   "Cartesian trials first move the simulator to (-0.5, -0.5, 1.6, 0, -0.6, 0) rad; setup is outside recorded trajectory"),
             "torque_definitions": TORQUE_DEFINITIONS,
             "validation": "IK position/orientation convergence and conservative joint limits; no physical robot involved",
             "video": video_info,

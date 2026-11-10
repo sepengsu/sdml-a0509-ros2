@@ -12,3 +12,23 @@ T4:
   name: Joint Excitation
   amplitude_deg: 5
   default_mode: sequential
+# T5-T14 definitions are implemented in trajectory_generator.EXCITATIONS.
+# All are joint-space, 100 Hz, 1 s pre/post hold, C2 quintic envelopes.
+# Frequencies, phase, and per-joint amplitudes are saved in each trial metadata.
+dynamics10:
+  seed: 20261110
+  train: [T5, T6, T7, T8, T9, T10, T11]
+  validation: [T12]
+  test: [T13, T14]
+  legacy_diagnostic: [T4]
+  trajectories:
+    T5: {name: "J2/J3 alternating sine", duration_s: 12}
+    T6: {name: "J1/J4 coupled sine", duration_s: 12}
+    T7: {name: "J5/J6 wrist excitation", duration_s: 12}
+    T8: {name: "J1/J3/J5 multi-sine", duration_s: 14}
+    T9: {name: "J2/J4/J6 multi-sine", duration_s: 14}
+    T10: {name: "six-joint multi-sine", duration_s: 16}
+    T11: {name: "J2/J3/J5 frequency sweep", duration_s: 14}
+    T12: {name: "J1/J4/J6 validation chirp", duration_s: 14}
+    T13: {name: "shifted-posture multi-sine", duration_s: 14}
+    T14: {name: "shifted-posture mixed excitation", duration_s: 15}

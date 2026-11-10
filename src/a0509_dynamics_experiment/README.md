@@ -1,6 +1,6 @@
 # A0509 dynamics experiment
 
-Doosan A0509의 동역학 데이터 수집용 ROS 2 패키지입니다. T1~T4는 초기 연구 제안값이며 **실로봇 안전 경로가 아닙니다**. `--preview`는 ROS 연결 없이 출력만 만듭니다. `--simulation`은 별도 ROS domain에서 MuJoCo를 시작하고 위치 명령을 시뮬레이터에만 보냅니다. 기본 Real Mode는 이미 실행 중인 Doosan RT 토픽을 읽고 기록하며 이동 명령을 만들지 않습니다.
+Doosan A0509의 동역학 데이터 수집용 ROS 2 패키지입니다. T1~T14는 초기 연구 제안값이며 **실로봇 안전 경로가 아닙니다**. `--preview`는 ROS 연결 없이 출력만 만듭니다. `--simulation`은 별도 ROS domain에서 MuJoCo를 시작하고 위치 명령을 시뮬레이터에만 보냅니다. 기본 Real Mode는 이미 실행 중인 Doosan RT 토픽을 읽고 기록하며 이동 명령을 만들지 않습니다.
 
 ## 준비
 
@@ -89,6 +89,46 @@ ros2 run a0509_dynamics_experiment run_experiment --preview --trajectory T1 --gr
 실로봇의 `a0509_real.launch.py gripper_type:=mdpg_1s1`은 AG145 구동/피킹 노드 없이 RT 상태 발행과 RViz를 사용합니다. 실제 접속은 검증하지 않았습니다. `run_experiment --simulation --gripper-type mdpg_1s1`의 **동역학 기록**과 `--execute`는 물리 파라미터·공압 IO·장착/안전 검증이 없어서 차단합니다.
 
 ## 결과와 데이터 의미
+
+### Dynamics10: 신규 관절 여기 T5~T14
+
+T5~T14는 AG145 고정 개방 자세의 MuJoCo 시뮬레이션 데이터 확장을 위한 관절 궤적입니다. T5는 J2/J3 교대, T6은 J1/J4 결합, T7은 J5/J6 손목, T8은 J1/J3/J5, T9는 J2/J4/J6, T10은 6축 동시 multi-sine입니다. T11은 J2/J3/J5 chirp, T12는 다른 관절 J1/J4/J6 chirp입니다. T13과 T14는 각각 다른 시작 자세에서 다관절 또는 순차·동시 운동을 결합합니다. 각 축의 진폭·주파수·위상·운동 구간은 `trajectory_generator.EXCITATIONS`와 개별 `metadata.json`에 기록합니다. 시작/종료에는 C2 quintic envelope를 쓰고 위치·속도·가속도를 같은 해석식에서 계산합니다.
+
+분할은 궤적과 trial 단위입니다: **TRAIN T5~T11**, **VALIDATION T12**, **TEST T13~T14**. 기존 T4는 진단용이며 최종 독립 시험으로 간주하지 않습니다. T1~T3의 기존 학습 데이터와 신규 데이터는 자동 병합하거나 PKAN을 재학습하지 않습니다. 새 데이터는 AG145의 기존 1.3 kg·근사 관성·임시 TCP를 유지합니다. mDPG-1S1은 물성 미확인으로 시뮬레이션 동역학 수집 대상에서 제외합니다.
+
+```bash
+# 저장소 루트, ROS 2 Humble과 install/setup.bash를 source한 후
+ros2 run a0509_dynamics_experiment run_experiment --preview --trajectory-set dynamics10 --gripper-type ag145 --results-dir results/dynamics10
+ros2 run a0509_dynamics_experiment run_experiment --simulation --trajectory-set dynamics10 --gripper-type ag145 --sample-hz 100 --results-dir results/dynamics10
+ros2 run a0509_dynamics_experiment run_experiment --simulation --trajectory T10 --gripper-type ag145 --results-dir results/dynamics10
+```
+
+Preview는 관절 위치·속도·가속도와 AG145 MuJoCo 접촉을 모든 100 Hz 계획 샘플에서 검사하지만 ROS 명령을 보내지 않습니다. Simulation은 별도 ROS domain에서 계획을 재검사하고, 다른 시작 자세로 이동할 때 6초 quintic 시뮬레이션 전용 준비 이동 후 도달 여부를 확인합니다. T5~T14의 Real Mode는 CLI에서 거부합니다. 각 simulation trial은 ROS Bag, 목표/실제 관절 상태, 별도 MuJoCo 모델에서 재구성한 역동역학, 6×6 질량행렬, bias, damping을 기록합니다. Bridge가 직접 제공하지 않는 `qfrc_actuator`는 비워 둡니다. 가속도는 최근 5개의 서로 다른 ROS 시뮬레이션 시각에 기록된 속도에 대한 최소제곱 기울기이며, 3개 미만이면 비웁니다. 역동역학 토크는 물리 센서 실측값이 아닙니다.
+
+결과는 `results/dynamics10/preview/T5..T14/`, `results/dynamics10/simulation/T5..T14/trial_NNN/`에 저장됩니다. 각 trial에 `trajectory.csv`, `trajectory.json`, `dynamics.csv`, `metadata.json`, `trajectory_3d.png`, `dynamics_plot.png`, `rosbag/`를 둡니다. 루트의 `dataset_manifest.json`과 `dataset_summary.csv`는 성공·실패, 유효 샘플, 누락·비유한 값, 시뮬레이션 시각·샘플 주기, 목표 추종, 관절 범위 및 기존 T1~T3 대비 **관절별 1차원 범위**를 기록합니다. `figures/`에는 계획 여기 10개, 위치·속도·가속도 범위, 속도·가속도 RMS, 토크 프로파일을 저장합니다. 1차원 범위 확대만으로 전체 18차원 상태공간의 충분한 탐색을 주장하지 않습니다. 품질 검사를 통과한 시뮬레이션 trial만 수집 완료로 계산합니다.
+
+배치 실행은 각 궤적을 독립적으로 시도하고, 실패 원인을 출력한 뒤 다음 궤적으로 넘어갑니다. 새 trial 폴더를 만들므로 이전 T1~T4 결과와 체크포인트를 덮어쓰지 않습니다. 동일 궤적을 다시 실행하면 `trial_002`처럼 번호가 증가하며, 매니페스트는 최신 metadata가 있는 trial을 선택합니다.
+
+2026-11-10 AG145 MuJoCo 실행에서 Preview 10개, Simulation 10개와 ROS Bag 10개를 만들었고 최신 simulation trial은 모두 품질 검사를 통과했습니다. 전체 유효 행은 **15,710개**이며 TRAIN 10,807, VALIDATION 1,601, TEST 3,302행입니다. 행들은 시계열 샘플이며 독립 trial은 궤적당 1회입니다.
+
+| ID | 분할 | 최신 trial | 유효 행 | 속도 최대 (rad/s) | 가속도 최대 (rad/s²) | 역동역학 토크 최대 (Nm) |
+|---|---|---|---:|---:|---:|---:|
+| T5 | Train | trial_003 | 1,401 | 0.114 | 0.422 | 110.96 |
+| T6 | Train | trial_001 | 1,401 | 0.135 | 0.531 | 83.05 |
+| T7 | Train | trial_001 | 1,401 | 0.156 | 0.663 | 95.62 |
+| T8 | Train | trial_001 | 1,601 | 0.124 | 0.501 | 97.84 |
+| T9 | Train | trial_001 | 1,601 | 0.133 | 0.513 | 79.60 |
+| T10 | Train | trial_001 | 1,801 | 0.113 | 0.395 | 81.74 |
+| T11 | Train | trial_001 | 1,601 | 0.106 | 0.314 | 106.69 |
+| T12 | Validation | trial_001 | 1,601 | 0.126 | 0.511 | 84.73 |
+| T13 | Test | trial_001 | 1,601 | 0.115 | 0.433 | 73.34 |
+| T14 | Test | trial_001 | 1,701 | 0.122 | 0.485 | 87.96 |
+
+표의 최대값은 6축 중 최대 절대값입니다. 관절별 위치 최소/최대, 속도·가속도·토크 RMS 및 최대, 최대 목표 추종 오차는 `dataset_summary.csv`와 각 trial `metadata.json`의 `data_quality`에 있습니다. `/joint_states`의 시뮬레이션 시각 기준 관찰 주기는 전 trial에서 약 99.98 Hz, 추정 누락률은 0%였습니다. 최대 목표 추종 오차는 0.0461 rad, 기록 행의 시각은 모두 증가했고 측정 관절 제한 위반은 없었습니다. 처음 실행한 T5 `trial_001`은 기록 시각 중복으로 품질 검사에 실패해 보존했고, 시각 단조 증가를 보장한 뒤 재실행한 `trial_002`와 배치의 `trial_003`은 통과했습니다.
+
+기존 AG145 T1~T3와 비교하면 신규 데이터의 위치 범위는 J1 아래쪽 0.206 rad, J2 아래쪽 0.171 rad, J4 아래쪽 0.241 rad 등으로 확장됐습니다. J3/J5의 속도 범위도 일부 확장됐습니다. 5행 간격 `q,dq` 12차원 표준화 최근접 거리의 중앙값은 1.439, 95백분위는 2.914입니다. 계획 관절각의 가장 가까운 두 궤적은 T5/T8이며 6축 RMS 거리는 0.033 rad로, 0.01 rad 미만 근접 중복은 없었습니다. 이 수치는 **전체 18차원 Coverage의 비율이나 독립 표본 증가율이 아닙니다.** 기존 T1~T3의 가속도는 벽시계 차분, 신규 데이터는 시뮬레이션 시각 필터에서 얻었으므로 가속도 범위는 직접 비교하지 않습니다.
+
+재현 그래프는 `results/dynamics10/figures/trajectory_overview.png`, `joint_excitation_coverage.png`, `velocity_acceleration_distribution.png`, `torque_profiles.png`입니다. `qfrc_inverse`와 토크 그래프는 **별도 MuJoCo 모델의 재구성 요구 토크**이며 실측 토크나 bridge의 `qfrc_actuator`가 아닙니다. 이 데이터로 PKAN을 학습하지 않았습니다.
 
 `results/<preview|simulation|real>/<T1..T4>/trial_001/`에 `trajectory.csv`, `trajectory.json`, `waypoints.csv`, `trajectory_3d.png`, `trajectory_3d.html`, `metadata.json`을 기록합니다. Simulation과 Real은 `dynamics.csv`, `dynamics_plot.png`, `rosbag/`도 기록합니다. `--record-video`를 지정하면 `simulation.mp4`가 추가됩니다. `trial_id`와 Bag 경로는 metadata에 연결됩니다. 결과 폴더는 Git에서 제외합니다.
 

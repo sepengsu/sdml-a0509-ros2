@@ -9,7 +9,8 @@ from pathlib import Path
 import sys
 
 from .dataset_exporter import create_trial, save_metadata, save_trajectory
-from .trajectory_generator import TrajectoryConfig, generate
+from .trajectory_generator import (DYNAMICS10_IDS, TRAJECTORY_IDS, TrajectoryConfig,
+                                   excitation_metadata, generate, is_joint_trajectory)
 from .trajectory_visualizer import save_trajectory_plot
 
 
@@ -19,11 +20,13 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--preview", action="store_true", help="generate plots without ROS or robot connection")
     mode.add_argument("--simulation", action="store_true", help="run in MuJoCo on an isolated ROS domain")
     parser.add_argument("--execute", action="store_true", help="request real motion; denied if any safety check is missing")
-    parser.add_argument("--trajectory", choices=["T1", "T2", "T3", "T4", "all"], required=True)
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--trajectory", choices=[*TRAJECTORY_IDS, "all"])
+    selection.add_argument("--trajectory-set", choices=["dynamics10"])
     parser.add_argument("--reference-tcp-mm", type=float, nargs=3, metavar=("X", "Y", "Z"))
     parser.add_argument("--start-mm", type=float, nargs=3, metavar=("X", "Y", "Z"), default=(0, 0, 0))
     parser.add_argument("--end-mm", type=float, nargs=3, metavar=("X", "Y", "Z"))
-    parser.add_argument("--joint-start-deg", type=float, nargs=6, metavar=("J1", "J2", "J3", "J4", "J5", "J6"), default=(0,) * 6)
+    parser.add_argument("--joint-start-deg", type=float, nargs=6, metavar=("J1", "J2", "J3", "J4", "J5", "J6"))
     parser.add_argument("--joints", type=int, nargs="+", choices=range(1, 7), default=[1, 2, 3, 4, 5, 6])
     parser.add_argument("--joint-mode", choices=["sequential", "simultaneous"], default="sequential")
     parser.add_argument("--amplitude-deg", type=float, default=5.0)
@@ -50,6 +53,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    new_joint = args.trajectory_set == "dynamics10" or args.trajectory in DYNAMICS10_IDS
+    if new_joint and not (args.preview or args.simulation):
+        parser.error("T5-T14 are simulation/preview only; real mode is unavailable")
+    if new_joint and (args.reference_tcp_mm or args.end_mm or args.start_mm != (0, 0, 0)):
+        parser.error("T5-T14 are joint-space paths; Cartesian options are unsupported")
     if args.gripper_type == "mdpg_1s1":
         if args.mdpg_mount_xyz is None or args.mdpg_mount_rpy is None:
             parser.error("mDPG mount is TODO; provide measured --mdpg-mount-xyz and --mdpg-mount-rpy")
@@ -84,7 +92,7 @@ def _config(args: argparse.Namespace, trajectory_id: str) -> TrajectoryConfig:
         trajectory_id=trajectory_id,
         reference_tcp_mm=tuple(args.reference_tcp_mm or (0.0, 0.0, 0.0)),
         start_mm=tuple(args.start_mm), end_mm=tuple(args.end_mm) if args.end_mm else None,
-        joint_start_rad=tuple(math.radians(x) for x in args.joint_start_deg),
+        joint_start_rad=tuple(math.radians(x) for x in (args.joint_start_deg or (0,) * 6)),
         joint_indices=tuple(i - 1 for i in args.joints), joint_mode=args.joint_mode,
         joint_amplitude_deg=args.amplitude_deg, speed=args.speed,
         segment_seconds=args.segment_seconds, repeats=args.repeats,
@@ -100,9 +108,12 @@ def main(argv: list[str] | None = None) -> int:
         None if args.gripper_type == "mdpg_1s1" else 0.0)
     if args.simulation and args.execute:
         print("--simulation takes priority; --execute has no real-robot effect.", file=sys.stderr)
-    ids = ("T1", "T2", "T3", "T4") if args.trajectory == "all" else (args.trajectory,)
-    try:
-        for trajectory_id in ids:
+    ids = (DYNAMICS10_IDS if args.trajectory_set == "dynamics10" else
+           ("T1", "T2", "T3", "T4") if args.trajectory == "all" else (args.trajectory,))
+    batch = args.trajectory_set == "dynamics10"
+    outcomes = {}
+    for trajectory_id in ids:
+        try:
             config = _config(args, trajectory_id)
             config.validate()
             if args.preview:
@@ -114,26 +125,37 @@ def main(argv: list[str] | None = None) -> int:
                     "movement_commands_sent": 0,
                     "gripper_type": args.gripper_type,
                 }
-                if args.gripper_type in ("ag145", "mdpg_1s1"):
+                if args.gripper_type in ("ag145", "mdpg_1s1") or trajectory_id in DYNAMICS10_IDS:
                     from .simulation_executor import MujocoObserver
                     if args.gripper_type == "ag145":
                         from .ag145_model import AG145_MASS_KG, AG145_TCP_OFFSET_MM, build_ag145_scene
                         scene = build_ag145_scene(folder / "ag145_scene.xml")
                         tcp_site = "ag145_tcp"
-                    else:
+                    elif args.gripper_type == "mdpg_1s1":
                         from mdpg_1s1_description.model import build_mdpg_scene
                         scene = build_mdpg_scene(folder / "mdpg_scene.xml", args.mdpg_mount_xyz, args.mdpg_mount_rpy)
                         tcp_site = "mdpg_tcp"
+                    else:
+                        from .ag145_model import source_paths
+                        scene = source_paths()[0]
+                        tcp_site = "tool0"
                     observer = MujocoObserver(scene, tcp_site=tcp_site)
-                    reference_q = ((-0.5, -0.5, 1.6, 0.0, -0.6, 0.0)
-                                   if trajectory_id != "T4" else config.joint_start_rad)
-                    if trajectory_id != "T4" and args.reference_tcp_mm is None:
+                    reference_q = (config.joint_start_rad if is_joint_trajectory(trajectory_id)
+                                   else (-0.5, -0.5, 1.6, 0.0, -0.6, 0.0))
+                    if not is_joint_trajectory(trajectory_id) and args.reference_tcp_mm is None:
                         config = replace(config, reference_tcp_mm=observer.tcp_mm(reference_q))
                     plan = generate(config)
                     plot_options["robot_links_mm"] = observer.links_mm(reference_q)
-                    if trajectory_id == "T4":
+                    if is_joint_trajectory(trajectory_id):
                         plot_options["planned_xyz_mm"] = [observer.tcp_mm(point.q_rad)
                                                             for point in plan.points]
+                    if trajectory_id in DYNAMICS10_IDS:
+                        from .dynamics10_safety import validate_joint_plan
+                        preview_details["preflight"] = validate_joint_plan(plan, observer)
+                        preview_details["dynamics10"] = excitation_metadata(trajectory_id)
+                        preview_details["trajectory_kind"] = "joint"
+                        preview_details["execution_success"] = True
+                        preview_details["sample_count"] = 0
                     preview_details["sim_model"] = scene.name
                     if args.gripper_type == "ag145":
                         preview_details["gripper_model"] = {
@@ -143,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
                             "tcp_site": tcp_site, "tcp_offset_mm": list(AG145_TCP_OFFSET_MM),
                             "tcp_calibrated": False,
                         }
-                    else:
+                    elif args.gripper_type == "mdpg_1s1":
                         preview_details["preview_note"] = "mDPG CAD geometry only; nominal TCP and supplied mount are uncalibrated; no ROS connection."
                         preview_details["gripper_model"] = {
                             "mass_kg": None, "inertia": None, "pneumatic_io": None,
@@ -172,10 +194,20 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"Real movement blocked after preflight; read-only data saved: {folder}", file=sys.stderr)
                     return 3
             print(f"Saved {trajectory_id}: {folder}")
-        return 0
-    except (ValueError, RuntimeError, OSError, ImportError) as error:
-        print(f"Experiment failed: {error}", file=sys.stderr)
-        return 1
+            outcomes[trajectory_id] = {"success": True, "path": str(folder)}
+        except (ValueError, RuntimeError, OSError, ImportError) as error:
+            print(f"{trajectory_id} failed: {error}", file=sys.stderr)
+            outcomes[trajectory_id] = {"success": False, "error": str(error)}
+            if not batch:
+                return 1
+    if batch or any(i in DYNAMICS10_IDS for i in ids):
+        from .dynamics10_dataset import summarize
+        summarize(args.results_dir, outcomes)
+    if batch:
+        print(f"Dynamics10 summary: {sum(v['success'] for v in outcomes.values())}/{len(outcomes)} succeeded")
+        for trajectory_id, result in outcomes.items():
+            print(f"  {trajectory_id}: {'OK' if result['success'] else 'FAILED - ' + result['error']}")
+    return 0 if all(item["success"] for item in outcomes.values()) else 1
 
 
 if __name__ == "__main__":

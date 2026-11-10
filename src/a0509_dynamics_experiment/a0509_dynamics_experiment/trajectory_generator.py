@@ -12,6 +12,62 @@ from typing import Iterable
 
 JOINT_NAMES = tuple(f"joint_{i}" for i in range(1, 7))
 DEFAULT_SIZES_MM = {"T1": (120.0, 0.0, 0.0), "T2": (0.0, 80.0, 60.0), "T3": (120.0, 80.0, 60.0)}
+CARTESIAN_IDS = ("T1", "T2", "T3")
+DYNAMICS10_IDS = tuple(f"T{i}" for i in range(5, 15))
+JOINT_IDS = ("T4", *DYNAMICS10_IDS)
+TRAJECTORY_IDS = (*CARTESIAN_IDS, *JOINT_IDS)
+BASE_HOME = (-0.5, -0.5, 1.6, 0.0, -0.6, 0.0)
+
+# (joint index, amplitude deg, f0 Hz, f1 Hz, phase rad, window start/end s).
+# A differing f1 selects a linear chirp. These are research starting values.
+EXCITATIONS = {
+    "T5": {"name": "J2/J3 alternating sine", "duration": 12.0, "split": "train",
+           "components": ((1, 5.0, .17, .17, .2, 0., 6.), (2, 5.0, .23, .23, .8, 6., 12.))},
+    "T6": {"name": "J1/J4 coupled sine", "duration": 12.0, "split": "train",
+           "components": ((0, 5.0, .14, .14, .1, 0., 12.), (3, 5.0, .26, .26, .9, 0., 12.))},
+    "T7": {"name": "J5/J6 wrist excitation", "duration": 12.0, "split": "train",
+           "components": ((4, 5.0, .32, .32, .4, 0., 12.), (5, 4.0, .38, .38, 1.2, 0., 12.))},
+    "T8": {"name": "J1/J3/J5 multi-sine", "duration": 14.0, "split": "train",
+           "components": ((0, 3.5, .12, .12, .1, 0., 14.), (0, 1.5, .27, .27, 1.1, 0., 14.),
+                          (2, 3.5, .16, .16, .7, 0., 14.), (2, 1.5, .25, .25, 1.8, 0., 14.),
+                          (4, 3.5, .21, .21, .4, 0., 14.), (4, 1.5, .34, .34, 2.1, 0., 14.))},
+    "T9": {"name": "J2/J4/J6 multi-sine", "duration": 14.0, "split": "train",
+           "components": ((1, 3.5, .13, .13, .5, 0., 14.), (1, 1.5, .24, .24, 1.6, 0., 14.),
+                          (3, 3.5, .18, .18, .2, 0., 14.), (3, 1.5, .31, .31, 1.4, 0., 14.),
+                          (5, 3.5, .22, .22, .9, 0., 14.), (5, 1.5, .36, .36, 2.3, 0., 14.))},
+    "T10": {"name": "six-joint multi-sine", "duration": 16.0, "split": "train",
+            "components": tuple((i, 4.0, .11 + .035*i, .11 + .035*i, .31*i, 0., 16.)
+                                for i in range(6))},
+    "T11": {"name": "J2/J3/J5 frequency sweep", "duration": 14.0, "split": "train",
+            "components": ((1, 4.0, .10, .28, .1, 0., 14.), (2, 4.0, .13, .31, .8, 0., 14.),
+                           (4, 3.0, .15, .36, 1.3, 0., 14.))},
+    "T12": {"name": "J1/J4/J6 validation chirp", "duration": 14.0, "split": "validation",
+            "components": ((0, 4.0, .12, .30, .3, 0., 14.), (3, 4.0, .14, .35, 1.1, 0., 14.),
+                           (5, 3.0, .16, .39, 1.8, 0., 14.))},
+    "T13": {"name": "shifted-posture multi-sine", "duration": 14.0, "split": "test",
+            "home": (-.35, -.65, 1.35, .12, -.50, .08),
+            "components": ((0, 4.0, .15, .15, .4, 0., 14.), (1, 3.0, .22, .22, 1.4, 0., 14.),
+                           (2, 4.0, .18, .18, .8, 0., 14.), (4, 4.0, .29, .29, 1.9, 0., 14.))},
+    "T14": {"name": "shifted-posture mixed excitation", "duration": 15.0, "split": "test",
+            "home": (-.65, -.35, 1.45, -.16, -.45, -.10),
+            "components": ((1, 5.0, .18, .18, .3, 0., 5.), (3, 5.0, .24, .24, .9, 5., 10.),
+                           (0, 4.0, .16, .16, .2, 10., 15.), (4, 4.0, .28, .28, 1.1, 10., 15.),
+                           (5, 3.0, .35, .35, 1.6, 10., 15.))},
+}
+EXCITATION_SEED = 20261110  # no stochastic sample is drawn in this version
+
+
+def is_joint_trajectory(trajectory_id: str) -> bool:
+    return trajectory_id in JOINT_IDS
+
+
+def excitation_metadata(trajectory_id: str) -> dict:
+    spec = EXCITATIONS[trajectory_id]
+    return {"name": spec["name"], "duration_s": spec["duration"], "split": spec["split"],
+            "home_rad": spec.get("home", BASE_HOME), "seed": EXCITATION_SEED,
+            "components": [{"joint": item[0]+1, "amplitude_deg": item[1], "f0_hz": item[2],
+                            "f1_hz": item[3], "phase_rad": item[4], "window_s": item[5:]}
+                           for item in spec["components"]]}
 
 
 @dataclass(frozen=True)
@@ -31,9 +87,13 @@ class TrajectoryConfig:
     post_hold_seconds: float = 1.0
     sample_hz: int = 100
 
+    def __post_init__(self) -> None:
+        if self.trajectory_id in EXCITATIONS and self.joint_start_rad == (0.0,) * 6:
+            object.__setattr__(self, "joint_start_rad", tuple(EXCITATIONS[self.trajectory_id].get("home", BASE_HOME)))
+
     def validate(self) -> None:
-        if self.trajectory_id not in ("T1", "T2", "T3", "T4"):
-            raise ValueError("trajectory_id must be T1, T2, T3, or T4")
+        if self.trajectory_id not in TRAJECTORY_IDS:
+            raise ValueError("unsupported trajectory_id")
         if self.speed not in ("low", "medium"):
             raise ValueError("speed must be low or medium")
         if self.repeats < 1 or self.sample_hz < 2:
@@ -119,9 +179,76 @@ def _joint_waypoints(config: TrajectoryConfig) -> list[tuple[float, ...]]:
     return result
 
 
+def _window(t: float, start: float, end: float) -> tuple[float, float, float]:
+    """C2 finite-duration envelope and its first two time derivatives."""
+    if t <= start or t >= end:
+        return 0.0, 0.0, 0.0
+    ramp = min(1.0, (end - start) / 3.0)
+    if t < start + ramp:
+        s, ds, dds = _quintic((t - start) / ramp)
+        return s, ds / ramp, dds / ramp**2
+    if t > end - ramp:
+        s, ds, dds = _quintic((end - t) / ramp)
+        return s, -ds / ramp, dds / ramp**2
+    return 1.0, 0.0, 0.0
+
+
+def _excitation_point(config: TrajectoryConfig, t: float, duration: float):
+    q = list(config.joint_start_rad)
+    dq, ddq = [0.0] * 6, [0.0] * 6
+    for joint, amplitude_deg, f0, f1, phase, start, end in EXCITATIONS[config.trajectory_id]["components"]:
+        start, end = start * duration / EXCITATIONS[config.trajectory_id]["duration"], end * duration / EXCITATIONS[config.trajectory_id]["duration"]
+        envelope, de, dde = _window(t, start, end)
+        elapsed = t - start
+        chirp_rate = (f1 - f0) / (end - start)
+        angle = 2 * math.pi * (f0 * elapsed + .5 * chirp_rate * elapsed**2) + phase
+        omega = 2 * math.pi * (f0 + chirp_rate * elapsed)
+        alpha = 2 * math.pi * chirp_rate
+        amplitude = math.radians(amplitude_deg * config.joint_amplitude_deg / 5.0)
+        sine, cosine = math.sin(angle), math.cos(angle)
+        q[joint] += amplitude * envelope * sine
+        dq[joint] += amplitude * (de * sine + envelope * omega * cosine)
+        ddq[joint] += amplitude * (dde * sine + 2 * de * omega * cosine
+                                   + envelope * (alpha * cosine - omega**2 * sine))
+    return tuple(q), tuple(dq), tuple(ddq)
+
+
+def _generate_excitation(config: TrajectoryConfig) -> TrajectoryPlan:
+    duration = config.segment_seconds or EXCITATIONS[config.trajectory_id]["duration"]
+    if config.speed == "medium" and config.segment_seconds is None:
+        duration *= .8
+    n = max(2, round(duration * config.sample_hz))
+    duration = n / config.sample_hz
+    points: list[TrajectoryPoint] = []
+    waypoint_indices: list[int] = []
+
+    def append(t, phase, q, dq, ddq, waypoint=False):
+        points.append(TrajectoryPoint(round(t, 9), phase, waypoint, None, None, None, q, dq, ddq))
+        if waypoint:
+            waypoint_indices.append(len(points)-1)
+
+    zero = (0.0,) * 6
+    pre_n = round(config.pre_hold_seconds * config.sample_hz)
+    for k in range(pre_n + 1):
+        append(k / config.sample_hz, "pre_hold", config.joint_start_rad, zero, zero, k == 0)
+    t0 = pre_n / config.sample_hz
+    for repeat in range(config.repeats):
+        for k in range(1, n + 1):
+            t = duration * k / n
+            q, dq, ddq = _excitation_point(config, t, duration)
+            append(t0 + t, f"motion_{repeat+1}", q, dq, ddq, k == n)
+        t0 += duration
+    post_n = round(config.post_hold_seconds * config.sample_hz)
+    for k in range(1, post_n + 1):
+        append(t0 + k / config.sample_hz, "post_hold", config.joint_start_rad, zero, zero, k == post_n)
+    return TrajectoryPlan(config, tuple(points), tuple(waypoint_indices))
+
+
 def generate(config: TrajectoryConfig) -> TrajectoryPlan:
     config.validate()
-    joint = config.trajectory_id == "T4"
+    if config.trajectory_id in DYNAMICS10_IDS:
+        return _generate_excitation(config)
+    joint = is_joint_trajectory(config.trajectory_id)
     waypoints = _joint_waypoints(config) if joint else _cartesian_waypoints(config)
     segment_seconds = config.segment_seconds or (4.0 if config.speed == "low" else 2.0)
     n = max(2, round(segment_seconds * config.sample_hz))

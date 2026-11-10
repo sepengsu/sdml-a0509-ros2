@@ -14,7 +14,7 @@ from .trajectory_generator import TrajectoryPlan
 JOINT_COLUMNS = [f"{stem}{i}" for stem in ("q", "dq", "ddq", "target_q") for i in range(1, 7)]
 COMMON_COLUMNS = ["timestamp", "ros_time_s", *JOINT_COLUMNS, "tcp_position", "trajectory_id",
                   "trial_id", "gripper_type", "payload_mass", "mode"]
-SIM_COLUMNS = ["qpos", "qvel", "qacc", "qfrc_inverse", "qfrc_actuator", "qfrc_applied", "qfrc_bias",
+SIM_COLUMNS = ["qpos", "qvel", "qacc", "qfrc_inverse", "qfrc_actuator", "qfrc_applied", "qfrc_bias", "mass_matrix",
                "body_mass", "body_inertia", "dof_frictionloss", "dof_damping"]
 REAL_COLUMNS = ["actual_joint_position", "actual_joint_velocity", "actual_motor_torque",
                 "actual_joint_torque", "external_joint_torque", "actual_tcp_position",
