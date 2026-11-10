@@ -125,7 +125,6 @@ def analyze(root: Path = ROOT, output: Path | None = None, stride: int = 1,
         if meta.get("gripper_type") != name or meta.get("mode") != "simulation":
             raise ValueError(f"{relative}: gripper metadata mismatch")
         valid = []
-        duplicate_stamps = 0
         for row in rows:
             try:
                 q, target = _six(row, "q"), _six(row, "target_q")
@@ -176,6 +175,7 @@ def analyze(root: Path = ROOT, output: Path | None = None, stride: int = 1,
                 or meta.get("mode") != "simulation" or meta.get("execution_success", True) is False):
             raise ValueError(f"{relative}: trial provenance mismatch")
         valid = []
+        duplicate_stamps = 0
         for row in rows:
             try:
                 state = (_six(row, "q"), _six(row, "dq"), _six(row, "ddq"))
