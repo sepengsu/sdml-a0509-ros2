@@ -210,6 +210,56 @@ MuJoCo의 `qpos`, `qvel`, `qacc`, `qfrc_inverse`, `qfrc_bias`는 측정 관절 �
 
 Simulation의 샘플링 품질은 `JointState.header.stamp`의 시뮬레이션 시간으로 계산합니다. MuJoCo가 실제 시간보다 느리게 재생될 수 있으므로 수신 벽시계 주기는 `wall_arrival_hz`로 별도 보존하고 데이터 누락률로 사용하지 않습니다.
 
+## 한 MuJoCo 장면에서 4×4 수집
+
+Windows PowerShell에서 아래처럼 실행합니다. `-Pilot`는 2×2에 bare, AG145+0.5 kg,
+mDPG, mDPG+1.0 kg을 배치해 T5를 검증합니다. 추종 오차가 0.05 rad를 넘거나,
+토크 제한을 넘거나, 충돌이 있으면 `-Play`는 시작하지 않습니다. `-Play`는
+7조건 × T1~T14 × 3회 = 294 trial을 16대, 이어서 5대의 두 batch로 수집합니다.
+
+```powershell
+.\scripts\play_grid_dataset.ps1 -Pilot -UseCadFaceCenterFixture
+docker logs -f a0509-grid-grid_4x4_7conditions
+.\scripts\play_grid_dataset.ps1 -Status
+.\scripts\play_grid_dataset.ps1 -Play -UseCadFaceCenterFixture
+docker logs -f a0509-grid-grid_4x4_7conditions
+.\scripts\play_grid_dataset.ps1 -Status
+```
+
+`-UseCadFaceCenterFixture`는 mDPG 빨간 CAD 면 중심을 `link_6` 원점에 놓는
+시뮬레이션 가정입니다. 실측 장착 변환이 있으면 `-MdpgMountXyz x,y,z`
+`-MdpgMountRpy r,p,y`를 대신 제공합니다. 조건과 payload 명세의 해시가
+기존 결과와 다르면 같은 결과 폴더를 재사용하지 않습니다. 한 궤적의 4×4
+smoke test는 `-Play -Trajectory T1 -MaxBatches 1`로 제한할 수 있습니다.
+
+장면의 2.5 m 간격은 시뮬레이션 배치값이며 접촉은 실행 중 검사합니다.
+로봇마다 관절·액추에이터·툴·페이로드를 복제하고 한 `/clock`을 씁니다.
+ROS Bag은 `/clock`, 접두사가 붙은 전체 `/joint_states`, `/target_joint_states`를
+오프라인으로 기록합니다. 각 trial의 `metadata.json`에서 공통 Bag 경로와
+lane을 연결합니다. 궤적별 시작 자세는 직접 초기화합니다. AG145 자세와
+mDPG 흡착 상태는 고정이며 실제 집기/진공/공압 IO는 모델링하지 않습니다.
+
+이 경로는 기존 ROS bridge 경로와 **다른 직접 MuJoCo 제어기**를 사용합니다.
+역동역학 feedforward와 관절 PD를 합쳐 MJCF 토크 제한으로 포화시키며,
+`qfrc_actuator`와 `qfrc_applied`를 구분해 기록합니다. 두 경로의 데이터는
+제어 및 물리량 정의를 검증하기 전 자동으로 합치지 않습니다. 헤드리스
+실행이어서 GPU 렌더링을 사용하지 않습니다. 한 장면도 16대의 물리 연산은
+수행하므로 16배 속도 향상을 보장하지 않습니다. 대신 ROS·컨테이너 시작,
+소프트웨어 렌더링 및 프로세스 간 통신 비용을 줄입니다.
+
+원래 MJCF의 관절 감쇠와 토크 제한에서는 일부 궤적의 요구 토크가 한계를
+넘습니다. 4×4 경로는 동일한 기하 경로를 느리게 재생합니다. `time_scale`은
+T1 1.0, T2 3.0, T3 1.5, T4/T5 1.25, T6 2.25, T7 2.75, T8 2.5,
+T9/T10 2.0, T11 1.75, T12 2.25, T13 2.0, T14 2.5입니다. 실제 100 Hz
+궤적의 속도·가속도와 `metadata.json`에 이를 기록합니다. 따라서 한 batch의
+계획 시뮬레이션 시간만 약 610초이고 두 batch 외에 모델 준비, 그래프,
+Bag 기록 시간이 추가됩니다. 원본 ROS bridge 데이터와 시간 이력이 달라
+자동 병합할 수 없습니다.
+
+결과는 `results/grid_4x4_7conditions/simulation/T1/<condition>/trial_001/`와
+`bags/batch_00/T1/...` 등에 저장합니다. 실패한 궤적은 완료 metadata가
+없어 재실행 시 다시 시도합니다. `-Status`는 294개 중 완료 수를 표시합니다.
+
 ## 안전과 검증 상태
 
 `--execute`는 요청 시에도 실제 이동 서비스를 호출하지 않습니다. 제어 권한, TCP/Tool/Payload 설정, 전체 경로의 충돌·특이점·작업 공간, 현재 자세와 시작점, 작업자 최종 승인에 관한 검증 체인이 구현·검증되기 전에는 이동을 열지 않습니다. 현재 구현은 이 항목을 미충족으로 보고 차단합니다.

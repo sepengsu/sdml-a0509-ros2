@@ -6,7 +6,7 @@ The suggested dimensions are research examples, not validated robot paths.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import math
 from typing import Iterable
 
@@ -86,6 +86,7 @@ class TrajectoryConfig:
     pre_hold_seconds: float = 1.0
     post_hold_seconds: float = 1.0
     sample_hz: int = 100
+    time_scale: float = 1.0
 
     def __post_init__(self) -> None:
         if self.trajectory_id in EXCITATIONS and self.joint_start_rad == (0.0,) * 6:
@@ -98,6 +99,10 @@ class TrajectoryConfig:
             raise ValueError("speed must be low or medium")
         if self.repeats < 1 or self.sample_hz < 2:
             raise ValueError("repeats must be positive and sample_hz must be at least 2")
+        if not math.isfinite(self.time_scale) or self.time_scale <= 0:
+            raise ValueError("time_scale must be positive and finite")
+        if abs(self.sample_hz * self.time_scale - round(self.sample_hz * self.time_scale)) > 1e-9:
+            raise ValueError("sample_hz * time_scale must be an integer")
         if self.pre_hold_seconds < 0 or self.post_hold_seconds < 0:
             raise ValueError("hold times cannot be negative")
         if self.segment_seconds is not None and self.segment_seconds <= 0:
@@ -246,6 +251,22 @@ def _generate_excitation(config: TrajectoryConfig) -> TrajectoryPlan:
 
 def generate(config: TrajectoryConfig) -> TrajectoryPlan:
     config.validate()
+    if config.time_scale != 1.0:
+        factor = config.time_scale
+        base = replace(config, time_scale=1.0,
+                       sample_hz=round(config.sample_hz * factor),
+                       pre_hold_seconds=config.pre_hold_seconds / factor,
+                       post_hold_seconds=config.post_hold_seconds / factor)
+        unscaled = generate(base)
+        def scaled(values, divisor):
+            return None if values is None else tuple(value / divisor for value in values)
+        points = tuple(replace(point, time_s=round(index / config.sample_hz, 9),
+                               velocity_mm_s=scaled(point.velocity_mm_s, factor),
+                               acceleration_mm_s2=scaled(point.acceleration_mm_s2, factor * factor),
+                               dq_rad_s=scaled(point.dq_rad_s, factor),
+                               ddq_rad_s2=scaled(point.ddq_rad_s2, factor * factor))
+                       for index, point in enumerate(unscaled.points))
+        return TrajectoryPlan(config, points, unscaled.waypoint_indices)
     if config.trajectory_id in DYNAMICS10_IDS:
         return _generate_excitation(config)
     joint = is_joint_trajectory(config.trajectory_id)

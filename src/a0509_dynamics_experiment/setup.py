@@ -13,7 +13,7 @@ setup(
         ("share/" + package_name + "/config", glob("config/*.yaml") + glob("config/*.json")),
         ("share/" + package_name + "/launch", glob("launch/*.launch.py")),
     ],
-    install_requires=["setuptools", "matplotlib>=3.5", "numpy>=1.21", "PyYAML>=6.0", "mujoco>=3.0"],
+    install_requires=["setuptools", "matplotlib>=3.5", "numpy>=1.21", "scipy>=1.8", "PyYAML>=6.0", "mujoco>=3.0"],
     extras_require={"video": ["mss>=10.0", "imageio-ffmpeg>=0.5", "Pillow>=9.0"],
                     "ag145": ["fast-simplification>=0.2"]},
     zip_safe=True,
