@@ -114,6 +114,24 @@ ros2 run a0509_dynamics_experiment render_mdpg_replay \
 
 ## 결과와 데이터 의미
 
+### 7조건 × T1~T14 × 3회 재수집
+
+`scripts/play_7_condition_dataset.ps1`은 bare A0509 무부하 1조건, AG145 0/0.5/1.0 kg 3조건, mDPG 0/0.5/1.0 kg 3조건을 T1~T14에서 각각 3회 실행하도록 294개 trial을 계획합니다. 기본 실행은 **계획 CSV만 생성**합니다. `-Play`를 명시해야 격리된 Docker MuJoCo에서 순차 수집을 시작합니다. 기존 결과를 덮어쓰지 않고 `results/recollection_7conditions/`에 조건·반복별로 저장하며, 성공한 trial은 재실행 시 건너뜁니다. 실로봇 명령은 사용하지 않습니다.
+
+0.5/1.0 kg 조건의 물리 모델은 `config/payload_conditions.json`에 있는 네 항목을 채워야 합니다. 각 항목의 `mount_xyz_m`/`mount_rpy_rad`는 해당 그리퍼 MuJoCo 본체(`ag145_base_link` 또는 `mdpg_base_link`)에서 페이로드 프레임까지의 변환입니다. `com_xyz_m`은 그 페이로드 프레임에서 중심질량까지, `inertia_kg_m2`는 **중심질량에서 페이로드 프레임 축으로 표현한** `[ixx, iyy, izz, ixy, ixz, iyz]`입니다. 단위는 m, rad, kg·m²입니다. `parameter_source`는 `measured` 또는 `declared_simulation_assumption` 중 하나로 명시하고 `source_note`에 측정/근사 방법을 적습니다. 값이 비어 있거나 관성텐서가 물리적으로 유효하지 않으면 첫 trial 전에 실행을 차단합니다.
+
+MuJoCo에서는 페이로드를 그리퍼에 고정된 관성체로 추가하므로 질량·관성이 토크 계산에 영향을 줍니다. 페이로드 외형, 충돌, 실제 파지력·진공 유지·이탈은 모델링하지 않았습니다. 따라서 이 수집은 **이상적인 고정 부착 시뮬레이션 데이터**이며 실제 작업물을 집어 올리는 실험이나 안전한 실로봇 경로 검증으로 해석할 수 없습니다. mDPG 자체의 0.62 kg 박스 관성과 장착/TCP 역시 아직 검증되지 않았습니다.
+
+```powershell
+# 저장소 루트에서 계획 294건 생성. 데이터 수집은 시작하지 않음.
+./scripts/play_7_condition_dataset.ps1
+
+# 네 페이로드 spec의 TODO와 실측 mDPG mount를 채운 후에만 실행.
+./scripts/play_7_condition_dataset.ps1 -Play -MdpgMountXyz @($xM,$yM,$zM) -MdpgMountRpy @($roll,$pitch,$yaw)
+```
+
+위의 `$xM` 등에는 미리 측정값을 대입해야 합니다. 값이 없으면 실행되지 않습니다.
+
 ### Dynamics10: 신규 관절 여기 T5~T14
 
 T5~T14는 AG145 고정 개방 자세의 MuJoCo 시뮬레이션 데이터 확장을 위한 관절 궤적입니다. T5는 J2/J3 교대, T6은 J1/J4 결합, T7은 J5/J6 손목, T8은 J1/J3/J5, T9는 J2/J4/J6, T10은 6축 동시 multi-sine입니다. T11은 J2/J3/J5 chirp, T12는 다른 관절 J1/J4/J6 chirp입니다. T13과 T14는 각각 다른 시작 자세에서 다관절 또는 순차·동시 운동을 결합합니다. 각 축의 진폭·주파수·위상·운동 구간은 `trajectory_generator.EXCITATIONS`와 개별 `metadata.json`에 기록합니다. 시작/종료에는 C2 quintic envelope를 쓰고 위치·속도·가속도를 같은 해석식에서 계산합니다.

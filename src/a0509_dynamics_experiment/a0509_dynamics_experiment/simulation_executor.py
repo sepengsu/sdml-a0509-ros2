@@ -279,7 +279,8 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             sim_domain_id: int, connect_existing: bool, launch_timeout_s: float = 60.0,
             reference_explicit: bool = False, record_video: bool = False,
             mdpg_mount_xyz=None, mdpg_mount_rpy=None,
-            mdpg_dynamics_model: str = "visual") -> Path:
+            mdpg_dynamics_model: str = "visual",
+            payload_spec_file: str | None = None) -> Path:
     if not 0 <= sim_domain_id <= 232:
         raise ValueError("ROS_DOMAIN_ID must be 0..232")
     if gripper_type not in ("none", "ag145", "mdpg_1s1"):
@@ -289,6 +290,12 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
         raise ValueError("mDPG dynamics requires explicit box_approx and mount pose")
     if gripper_type in ("ag145", "mdpg_1s1") and connect_existing:
         raise ValueError("tool simulation requires a newly launched matching model")
+    payload_spec = None
+    if payload_mass > 0:
+        if not payload_spec_file:
+            raise ValueError("positive payload mass requires --payload-spec-file")
+        from .payload_model import load_payload_spec
+        payload_spec = load_payload_spec(payload_spec_file, gripper_type, payload_mass)
     if "rclpy" in __import__("sys").modules and os.environ.get("ROS_DOMAIN_ID") != str(sim_domain_id):
         raise RuntimeError("simulation domain cannot change after rclpy has been imported")
     os.environ["ROS_DOMAIN_ID"] = str(sim_domain_id)
@@ -326,6 +333,9 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             "pneumatic_io": None, "suction_contact": None,
             "label_use": "synthetic approximation only; not real torque ground truth",
         }
+    if payload_spec is not None:
+        from .payload_model import attach_payload
+        attach_payload(scene_path, payload_spec)
     import rclpy
     from rclpy.node import Node
     from rclpy.parameter import Parameter
@@ -517,6 +527,9 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             "quality": recorder.quality(), "ros_domain_id": sim_domain_id,
             "time_sync": "JointState header and ros_time_s use MuJoCo simulation time; callback arrival time is used for freshness. Bag storage timestamps use wall time.",
             "gripper_type": gripper_type, "payload_mass_kg": payload_mass,
+            "payload_model": ({**payload_spec, "contact_geometry": None,
+                               "attachment_model": "ideal fixed body; no grasp or suction failure model"}
+                              if payload_spec else None),
             "rosbag": str(bag_path), "rosbag_relative_path": "rosbag",
             "sim_model": ("ag145_scene.xml (generated from dsr_description2 A0509 and dh_ag145_description)"
                           if gripper_type == "ag145" else

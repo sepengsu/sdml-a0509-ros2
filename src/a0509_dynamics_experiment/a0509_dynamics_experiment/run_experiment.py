@@ -47,7 +47,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mdpg-dynamics-model", choices=["visual", "box_approx"], default="visual",
                         help="explicit uniform-box inertia estimate for mDPG simulation only")
     parser.add_argument("--payload-mass", type=float, default=None,
-                        help="attached payload mass in kg; mDPG currently supports zero only")
+                        help="attached payload mass in kg; positive simulation mass requires a full inertial spec")
+    parser.add_argument("--payload-spec-file", type=str,
+                        help="JSON with declared payload mount, COM and inertia for simulation")
     parser.add_argument("--sim-domain-id", type=int, default=173)
     parser.add_argument("--connect-existing", action="store_true", help="connect to existing MuJoCo in the isolated domain")
     parser.add_argument("--record-video", action="store_true", help="save an MP4 of the MuJoCo display")
@@ -67,8 +69,6 @@ def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None
             parser.error("mDPG mount values must be finite")
         if args.simulation and args.mdpg_dynamics_model != "box_approx":
             parser.error("mDPG dynamics simulation requires --mdpg-dynamics-model box_approx (unvalidated estimate)")
-        if args.payload_mass not in (None, 0):
-            parser.error("mDPG payload is not included in the MuJoCo model; --payload-mass must be zero or omitted")
         if args.execute:
             parser.error("mDPG real motion is blocked until mount, TCP and pneumatic IO are validated")
         if not (args.preview or args.simulation) and args.mdpg_dynamics_model != "visual":
@@ -85,6 +85,20 @@ def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None
         parser.error("--record-video requires --simulation")
     if args.payload_mass is not None and (args.payload_mass < 0 or not math.isfinite(args.payload_mass)):
         parser.error("--payload-mass must be finite and nonnegative")
+    if args.payload_mass and args.gripper_type == "none":
+        parser.error("bare A0509 does not have a payload mount; use payload mass zero")
+    if args.payload_mass and args.preview:
+        parser.error("positive payload mass is currently supported only in simulation")
+    if args.payload_mass and args.simulation:
+        if not args.payload_spec_file:
+            parser.error("positive simulation payload requires --payload-spec-file")
+        from .payload_model import load_payload_spec
+        try:
+            load_payload_spec(args.payload_spec_file, args.gripper_type, args.payload_mass)
+        except (ValueError, OSError, KeyError) as error:
+            parser.error(str(error))
+    elif args.payload_spec_file:
+        parser.error("--payload-spec-file requires simulation with positive payload mass")
     if args.duration <= 0 or args.connection_timeout <= 0:
         parser.error("duration and connection timeout must be positive")
     if args.end_mm and args.trajectory == "T4":
@@ -203,7 +217,8 @@ def main(argv: list[str] | None = None) -> int:
                                  record_video=args.record_video,
                                  mdpg_mount_xyz=args.mdpg_mount_xyz,
                                  mdpg_mount_rpy=args.mdpg_mount_rpy,
-                                 mdpg_dynamics_model=args.mdpg_dynamics_model)
+                                 mdpg_dynamics_model=args.mdpg_dynamics_model,
+                                 payload_spec_file=args.payload_spec_file)
             else:
                 from .real_executor import execute
                 folder, blocked = execute(config, args.results_dir, args.gripper_type, payload_mass,
