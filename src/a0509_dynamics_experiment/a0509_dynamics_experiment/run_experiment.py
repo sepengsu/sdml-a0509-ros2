@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import math
 from pathlib import Path
 import sys
@@ -89,15 +90,44 @@ def main(argv: list[str] | None = None) -> int:
             config = _config(args, trajectory_id)
             config.validate()
             if args.preview:
-                plan = generate(config)
                 folder, trial_id = create_trial(args.results_dir, "preview", trajectory_id)
-                save_trajectory(plan, folder)
-                save_trajectory_plot(plan, folder)
-                save_metadata(folder, plan, "preview", trial_id, {
+                plot_options = {}
+                preview_details = {
                     "reference_frame": "base_link",
                     "preview_note": "Coordinates are relative to the specified TCP reference; default is base origin and not a measured robot pose.",
                     "movement_commands_sent": 0,
-                })
+                    "gripper_type": args.gripper_type,
+                }
+                if args.gripper_type == "ag145":
+                    from .ag145_model import AG145_MASS_KG, AG145_TCP_OFFSET_MM, build_ag145_scene
+                    from .simulation_executor import MujocoObserver
+                    scene = build_ag145_scene(folder / "ag145_scene.xml")
+                    observer = MujocoObserver(scene)
+                    reference_q = ((-0.5, -0.5, 1.6, 0.0, -0.6, 0.0)
+                                   if trajectory_id != "T4" else config.joint_start_rad)
+                    if trajectory_id != "T4" and args.reference_tcp_mm is None:
+                        config = replace(config, reference_tcp_mm=observer.tcp_mm(reference_q))
+                    plan = generate(config)
+                    plot_options["robot_links_mm"] = observer.links_mm(reference_q)
+                    if trajectory_id == "T4":
+                        plot_options["planned_xyz_mm"] = [observer.tcp_mm(point.q_rad)
+                                                            for point in plan.points]
+                    preview_details.update({
+                        "preview_note": "AG145 TCP and A0509 links use the generated MuJoCo model; no ROS or robot connection.",
+                        "sim_model": "ag145_scene.xml",
+                        "gripper_model": {
+                            "configuration": "fixed open pose", "mass_kg": AG145_MASS_KG,
+                            "inertia": "uncalibrated box approximation",
+                            "collision": "approximate bounding boxes",
+                            "tcp_site": "ag145_tcp", "tcp_offset_mm": list(AG145_TCP_OFFSET_MM),
+                            "tcp_calibrated": False,
+                        },
+                    })
+                else:
+                    plan = generate(config)
+                save_trajectory(plan, folder)
+                save_trajectory_plot(plan, folder, **plot_options)
+                save_metadata(folder, plan, "preview", trial_id, preview_details)
             elif args.simulation:
                 from .simulation_executor import execute
                 folder = execute(config, args.results_dir, args.gripper_type, args.payload_mass,

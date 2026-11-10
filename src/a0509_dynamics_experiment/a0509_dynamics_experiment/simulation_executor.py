@@ -48,6 +48,7 @@ class MujocoObserver:
         self.body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "link_6")
         if self.body_id < 0:
             raise RuntimeError("MuJoCo model missing link_6")
+        self.tcp_site_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "ag145_tcp")
         # Conservative research limits from a0509_mujoco_sim/config/joint_limits.yaml.
         self.limits = [(-3.14, 3.14), (-1.3, 1.3), (-2.0, 2.0),
                        (-3.14, 3.14), (-2.0, 2.0), (-3.14, 3.14)]
@@ -68,7 +69,14 @@ class MujocoObserver:
 
     def tcp_mm(self, q):
         self._set_state(q)
-        return tuple(float(x * 1000) for x in self.data.xpos[self.body_id])
+        return tuple(float(x * 1000) for x in self._tcp_pos())
+
+    def _tcp_pos(self):
+        return self.data.site_xpos[self.tcp_site_id] if self.tcp_site_id >= 0 else self.data.xpos[self.body_id]
+
+    def _tcp_rotation(self):
+        matrix = self.data.site_xmat[self.tcp_site_id] if self.tcp_site_id >= 0 else self.data.xmat[self.body_id]
+        return matrix.reshape(3, 3)
 
     def links_mm(self, q):
         self._set_state(q)
@@ -76,35 +84,41 @@ class MujocoObserver:
         for i in range(1, 7):
             body = self.mj.mj_name2id(self.model, self.mj.mjtObj.mjOBJ_BODY, f"link_{i}")
             result.append(tuple(float(x * 1000) for x in self.data.xpos[body]))
+        if self.tcp_site_id >= 0:
+            result.append(tuple(float(x * 1000) for x in self._tcp_pos()))
         return result
 
     def set_ik_reference(self, q):
         self._set_state(q)
-        self.reference_rotation = self.data.xmat[self.body_id].reshape(3, 3).copy()
+        self.reference_rotation = self._tcp_rotation().copy()
 
     def require_contact_free(self, q):
         self._set_state(q)
         if self.data.ncon:
             raise RuntimeError(f"MuJoCo model reports {self.data.ncon} contact(s); trajectory command blocked")
+        return tuple(float(x * 1000) for x in self._tcp_pos())
 
     def solve_ik(self, xyz_mm, seed):
         np = self.np
         q = np.asarray(seed, dtype=float).copy()
         self._set_state(q)
         desired_rotation = (self.reference_rotation if self.reference_rotation is not None else
-                            self.data.xmat[self.body_id].reshape(3, 3).copy())
+                            self._tcp_rotation().copy())
         target = np.asarray(xyz_mm, dtype=float) / 1000.0
         for _ in range(100):
             self._set_state(q)
-            current = self.data.xpos[self.body_id].copy()
-            rotation = self.data.xmat[self.body_id].reshape(3, 3)
+            current = self._tcp_pos().copy()
+            rotation = self._tcp_rotation()
             error_pos = target - current
             error_rot = 0.5 * sum((np.cross(rotation[:, i], desired_rotation[:, i]) for i in range(3)), np.zeros(3))
             if np.linalg.norm(error_pos) < 0.001 and np.linalg.norm(error_rot) < 0.035:
                 return tuple(float(x) for x in q)
             jac_pos = np.zeros((3, self.model.nv))
             jac_rot = np.zeros((3, self.model.nv))
-            self.mj.mj_jacBody(self.model, self.data, jac_pos, jac_rot, self.body_id)
+            if self.tcp_site_id >= 0:
+                self.mj.mj_jacSite(self.model, self.data, jac_pos, jac_rot, self.tcp_site_id)
+            else:
+                self.mj.mj_jacBody(self.model, self.data, jac_pos, jac_rot, self.body_id)
             columns = self.dof_addr
             jacobian = np.vstack((jac_pos[:, columns], 0.3 * jac_rot[:, columns]))
             error = np.concatenate((error_pos, 0.3 * error_rot))
@@ -126,14 +140,14 @@ class MujocoObserver:
             inverse = tuple(float(self.data.qfrc_inverse[i]) for i in self.dof_addr)
         return {"qpos": positions, "qvel": velocities, "qacc": acceleration,
                 "qfrc_inverse": inverse, "qfrc_actuator": None, "qfrc_bias": bias,
-                "tcp_position": tuple(float(x * 1000) for x in self.data.xpos[self.body_id]),
+                "tcp_position": tuple(float(x * 1000) for x in self._tcp_pos()),
                 "body_mass": tuple(float(x) for x in self.model.body_mass),
                 "body_inertia": tuple(tuple(float(v) for v in row) for row in self.model.body_inertia),
                 "dof_frictionloss": tuple(float(self.model.dof_frictionloss[i]) for i in self.dof_addr),
                 "dof_damping": tuple(float(self.model.dof_damping[i]) for i in self.dof_addr)}
 
 
-def _markers(node, plan):
+def _markers(node, plan, planned_xyz_mm=None):
     from geometry_msgs.msg import Point
     from rclpy.qos import DurabilityPolicy, QoSProfile
     from visualization_msgs.msg import Marker, MarkerArray
@@ -153,8 +167,10 @@ def _markers(node, plan):
     line.color.r, line.color.g, line.color.b, line.color.a = (0.1, 0.3, 1.0, 1.0)
     urdf_path = find_a0509_urdf() if plan.config.trajectory_id == "T4" else None
     urdf = A0509Urdf(urdf_path) if urdf_path else None
-    for item in plan.points:
-        xyz = item.xyz_mm if item.xyz_mm else urdf.links_mm(item.q_rad)[-1] if urdf else None
+    for index, item in enumerate(plan.points):
+        xyz = (item.xyz_mm if item.xyz_mm else
+               planned_xyz_mm[index] if planned_xyz_mm else
+               urdf.links_mm(item.q_rad)[-1] if urdf else None)
         if xyz:
             p = Point()
             p.x, p.y, p.z = (v / 1000.0 for v in xyz)
@@ -210,9 +226,25 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             reference_explicit: bool = False, record_video: bool = False) -> Path:
     if not 0 <= sim_domain_id <= 232:
         raise ValueError("ROS_DOMAIN_ID must be 0..232")
+    if gripper_type not in ("none", "ag145"):
+        raise ValueError("simulation gripper type must be none or ag145")
+    if gripper_type == "ag145" and connect_existing:
+        raise ValueError("AG145 simulation requires a newly launched model")
     if "rclpy" in __import__("sys").modules and os.environ.get("ROS_DOMAIN_ID") != str(sim_domain_id):
         raise RuntimeError("simulation domain cannot change after rclpy has been imported")
     os.environ["ROS_DOMAIN_ID"] = str(sim_domain_id)
+    precreated_trial = None
+    scene_path = None
+    gripper_model_info = None
+    if gripper_type == "ag145":
+        from .ag145_model import AG145_MASS_KG, AG145_TCP_OFFSET_MM, build_ag145_scene
+        precreated_trial = create_trial(root, "simulation", config.trajectory_id)
+        scene_path = build_ag145_scene(precreated_trial[0] / "ag145_scene.xml")
+        gripper_model_info = {"configuration": "fixed open pose", "mass_kg": AG145_MASS_KG,
+                              "inertia": "uncalibrated box approximation",
+                              "collision": "approximate bounding boxes",
+                              "tcp_site": "ag145_tcp", "tcp_offset_mm": list(AG145_TCP_OFFSET_MM),
+                              "tcp_calibrated": False}
     import rclpy
     from rclpy.node import Node
     from rclpy.parameter import Parameter
@@ -226,8 +258,11 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
     rclpy.init()
     try:
         if not connect_existing:
-            launch = subprocess.Popen(["ros2", "launch", "a0509_mujoco_sim", "mujoco_sim.launch.py",
-                                       "use_sim_time:=true"], env=os.environ.copy())
+            launch_args = ["ros2", "launch", "a0509_mujoco_sim", "mujoco_sim.launch.py",
+                           "use_sim_time:=true"]
+            if scene_path is not None:
+                launch_args.append(f"mujoco_model_path:={scene_path}")
+            launch = subprocess.Popen(launch_args, env=os.environ.copy())
         node = Node("a0509_dynamics_simulation", parameter_overrides=[Parameter("use_sim_time", value=True)],
                     automatically_declare_parameters_from_overrides=True)
         latest = {"q": None, "dq": None, "effort": None, "arrival": None}
@@ -268,7 +303,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             rclpy.spin_once(node, timeout_sec=0.1)
         if publisher.get_subscription_count() == 0:
             raise RuntimeError("MuJoCo position controller is not subscribed; commands blocked")
-        observer = MujocoObserver()
+        observer = MujocoObserver(scene_path)
         start_q = latest["q"]
         if config.trajectory_id == "T4":
             config = replace(config, joint_start_rad=start_q)
@@ -284,22 +319,24 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                 config = replace(config, reference_tcp_mm=measured_reference)
         plan = generate(config)
         targets = []
+        planned_tcp = []
         previous = start_q
         for point in plan.points:
             if point.q_rad is not None:
                 target = point.q_rad
             else:
                 target = observer.solve_ik(point.xyz_mm, previous)
-            observer.require_contact_free(target)
+            planned_tcp.append(observer.require_contact_free(target))
             targets.append(target)
             previous = target
-        folder, trial_id = create_trial(root, "simulation", config.trajectory_id)
+        folder, trial_id = precreated_trial or create_trial(root, "simulation", config.trajectory_id)
         recorder.trial_id = trial_id
         save_trajectory(plan, folder)
         snapshots = [observer.links_mm(targets[i]) for i in
                      sorted({0, len(targets) // 4, len(targets) // 2, 3 * len(targets) // 4, len(targets) - 1})]
         save_trajectory_plot(plan, folder, robot_links_mm=observer.links_mm(start_q),
-                             robot_snapshots_mm=snapshots)
+                             robot_snapshots_mm=snapshots,
+                             planned_xyz_mm=planned_tcp if config.trajectory_id == "T4" else None)
         if record_video:
             from .video_recorder import SimulationVideoRecorder
             video = SimulationVideoRecorder(folder / "simulation.mp4")
@@ -317,7 +354,7 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                 break
         else:
             raise RuntimeError("ROS 2 Bag or fresh joint feedback did not become ready")
-        marker_publisher = _markers(node, plan)
+        marker_publisher = _markers(node, plan, planned_tcp)
         measured = []
         previous_dq = None
         previous_at = None
@@ -372,7 +409,8 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
                           if all(row.get(f"q{i}") is not None for i in range(1, 7))]
         save_trajectory_plot(plan, folder, measured_xyz_mm=measured,
                              measured_joint_rad=measured_joint, measured_time_s=measured_times,
-                             robot_links_mm=observer.links_mm(start_q), robot_snapshots_mm=snapshots)
+                             robot_links_mm=observer.links_mm(start_q), robot_snapshots_mm=snapshots,
+                             planned_xyz_mm=planned_tcp if config.trajectory_id == "T4" else None)
         save_dynamics_plot(recorder.rows, folder)
         video_info = video.stop() if video is not None else None
         video = None
@@ -381,7 +419,9 @@ def execute(config: TrajectoryConfig, root: str, gripper_type: str, payload_mass
             "time_sync": "JointState header and ros_time_s use MuJoCo simulation time; callback arrival time is used for freshness. Bag storage timestamps use wall time.",
             "gripper_type": gripper_type, "payload_mass_kg": payload_mass,
             "rosbag": str(bag_path), "rosbag_relative_path": "rosbag",
-            "sim_model": "dsr_description2/mujoco_models/a0509/scene.xml",
+            "sim_model": ("ag145_scene.xml (generated from dsr_description2 A0509 and dh_ag145_description)"
+                          if gripper_type == "ag145" else "dsr_description2/mujoco_models/a0509/scene.xml"),
+            "gripper_model": gripper_model_info,
             "physics_source": "Separate MuJoCo model reconstructed from measured q/dq/ddq; qfrc_actuator unavailable from upstream bridge",
             "acceleration_method": "finite difference of observed JointState velocity; blank if velocity unavailable",
             "sim_initialization": "Cartesian trials first move the simulator to (-0.5, -0.5, 1.6, 0, -0.6, 0) rad; this setup move is outside the recorded trajectory",

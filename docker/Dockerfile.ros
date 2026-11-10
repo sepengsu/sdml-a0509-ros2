@@ -22,7 +22,7 @@ ENV LD_LIBRARY_PATH=${MUJOCO_DIR}/lib
 RUN mkdir -p /opt/mujoco && \
     curl -fL "https://github.com/google-deepmind/mujoco/releases/download/${MUJOCO_VERSION}/mujoco-${MUJOCO_VERSION}-linux-x86_64.tar.gz" \
       | tar -xz -C /opt/mujoco && \
-    python3 -m pip install --no-cache-dir "mujoco==${MUJOCO_VERSION}" matplotlib numpy PyYAML mss imageio-ffmpeg
+    python3 -m pip install --no-cache-dir "mujoco==${MUJOCO_VERSION}" matplotlib numpy PyYAML mss imageio-ffmpeg fast-simplification
 
 # Setup noVNC
 RUN ln -s /usr/share/novnc/vnc.html /usr/share/novnc/index.html

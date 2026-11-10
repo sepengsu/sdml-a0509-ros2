@@ -23,7 +23,8 @@ def save_trajectory_plot(plan: TrajectoryPlan, folder: Path,
                          measured_joint_rad: Sequence[Sequence[float]] | None = None,
                          measured_time_s: Sequence[float] | None = None,
                          robot_links_mm: Sequence[Sequence[float]] | None = None,
-                         robot_snapshots_mm: Sequence[Sequence[Sequence[float]]] | None = None) -> None:
+                         robot_snapshots_mm: Sequence[Sequence[Sequence[float]]] | None = None,
+                         planned_xyz_mm: Sequence[Sequence[float]] | None = None) -> None:
     plt = _plot()
     joint = plan.config.trajectory_id == "T4"
     urdf_path = find_a0509_urdf()
@@ -41,7 +42,7 @@ def save_trajectory_plot(plan: TrajectoryPlan, folder: Path,
                              label="Measured" if i == 0 else None)
         time_ax.set_xlabel("Time (s)"); time_ax.set_ylabel("Joint angle (deg)")
         time_ax.legend(ncol=3, fontsize=8); time_ax.grid(True)
-    if joint and urdf is None:
+    if joint and urdf is None and planned_xyz_mm is None:
         q_values = [point.q_rad for point in plan.points]
         series = [[value[i] * 180 / math.pi for value in q_values] for i in range(3)]
         ax.plot(*series, color="tab:blue", linewidth=1.5)
@@ -51,8 +52,9 @@ def save_trajectory_plot(plan: TrajectoryPlan, folder: Path,
         ax.legend(fontsize=8)
     else:
         if joint:
-            values = [urdf.links_mm(point.q_rad)[-1] for point in plan.points]
-            robot_links_mm = urdf.links_mm(plan.points[0].q_rad)
+            values = list(planned_xyz_mm) if planned_xyz_mm is not None else [urdf.links_mm(point.q_rad)[-1] for point in plan.points]
+            if robot_links_mm is None and urdf is not None:
+                robot_links_mm = urdf.links_mm(plan.points[0].q_rad)
             reference = values[0]
         else:
             values = [point.xyz_mm for point in plan.points]
@@ -75,7 +77,7 @@ def save_trajectory_plot(plan: TrajectoryPlan, folder: Path,
             ax.plot(*zip(*measured_xyz_mm), color="tab:red", label="Measured", alpha=0.8)
         if robot_links_mm:
             ax.plot(*zip(*robot_links_mm), color="0.35", marker="o", label="Robot links")
-            if joint:
+            if joint and urdf is not None and planned_xyz_mm is None:
                 for index in plan.waypoint_indices[1::max(1, len(plan.waypoint_indices) // 4)]:
                     links = urdf.links_mm(plan.points[index].q_rad)
                     ax.plot(*zip(*links), color="0.6", alpha=0.25)

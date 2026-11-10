@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from a0509_dynamics_experiment.dataset_exporter import create_trial, save_dynamics, save_metadata, save_trajectory
+from a0509_dynamics_experiment.ag145_model import AG145_MASS_KG, build_ag145_scene, source_paths
 from a0509_dynamics_experiment.dynamics_logger import DynamicsRecorder
 from a0509_dynamics_experiment.real_executor import validate_real_execution
 from a0509_dynamics_experiment.run_experiment import main
@@ -140,6 +141,43 @@ def test_urdf_model_contains_six_link_chain():
     points = A0509Urdf(path).links_mm((0,) * 6)
     assert len(points) == 7
     assert points[-1][2] > 1000
+
+
+def test_ag145_scene_has_tool_mass_visuals_and_tcp(tmp_path):
+    pytest.importorskip("mujoco")
+    arm_scene, gripper_urdf = source_paths()
+    if not arm_scene.is_file() or not gripper_urdf.is_file():
+        pytest.skip("A0509 or AG145 model package not initialized")
+    scene = build_ag145_scene(tmp_path / "scene.xml", arm_scene, gripper_urdf)
+    bare = MujocoObserver(arm_scene)
+    gripper = MujocoObserver(scene)
+    assert gripper.model.nq == bare.model.nq == 6
+    assert sum(gripper.model.body_mass) - sum(bare.model.body_mass) == pytest.approx(AG145_MASS_KG)
+    assert gripper.tcp_site_id >= 0
+    assert sum(name.startswith("ag145_") for name in
+               (gripper.model.geom(i).name for i in range(gripper.model.ngeom))) >= 8
+    q = (-0.5, -0.5, 1.6, 0, -0.6, 0)
+    assert math.dist(gripper.tcp_mm(q), bare.tcp_mm(q)) > 100
+    gripper.set_ik_reference(q)
+    target = tuple(value + offset for value, offset in zip(gripper.tcp_mm(q), (10, 0, 0)))
+    solved = gripper.solve_ik(target, q)
+    gripper.require_contact_free(solved)
+    assert math.dist(gripper.tcp_mm(solved), target) < 1.1
+
+
+def test_ag145_preview_uses_tool_tcp_without_robot_connection(tmp_path):
+    pytest.importorskip("mujoco")
+    assert main(["--preview", "--trajectory", "T1", "--gripper-type", "ag145",
+                 "--results-dir", str(tmp_path), "--sample-hz", "10",
+                 "--segment-seconds", "0.2", "--pre-hold", "0",
+                 "--post-hold", "0"]) == 0
+    folder = tmp_path / "preview" / "T1" / "trial_001"
+    observer = MujocoObserver(folder / "ag145_scene.xml")
+    home = (-0.5, -0.5, 1.6, 0, -0.6, 0)
+    with (folder / "trajectory.csv").open(newline="", encoding="utf-8") as stream:
+        first = next(csv.DictReader(stream))
+    assert float(first["x_mm"]) == pytest.approx(observer.tcp_mm(home)[0])
+    assert (folder / "trajectory_3d.png").stat().st_size > 1000
 
 
 @pytest.mark.parametrize("trajectory_id", ["T1", "T2", "T3"])

@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0",
+  "created_utc": "2026-11-10T07:11:26.191256+00:00",
+  "trajectory_id": "T3",
+  "trial_id": "trial_001",
+  "mode": "preview",
+  "trajectory_config": {
+    "trajectory_id": "T3",
+    "reference_tcp_mm": [
+      251.38333787250306,
+      -137.25612683957934,
+      965.6395382805225
+    ],
+    "start_mm": [
+      0,
+      0,
+      0
+    ],
+    "end_mm": null,
+    "joint_start_rad": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "joint_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "joint_mode": "sequential",
+    "joint_amplitude_deg": 5.0,
+    "speed": "low",
+    "segment_seconds": null,
+    "repeats": 1,
+    "pre_hold_seconds": 1.0,
+    "post_hold_seconds": 1.0,
+    "sample_hz": 100
+  },
+  "joint_order": [
+    "joint_1",
+    "joint_2",
+    "joint_3",
+    "joint_4",
+    "joint_5",
+    "joint_6"
+  ],
+  "units": {
+    "q": "rad",
+    "dq": "rad/s",
+    "ddq": "rad/s^2",
+    "target_q": "rad",
+    "tcp_position": "mm",
+    "torque": "Nm",
+    "timestamp": "UTC Unix seconds",
+    "ros_time_s": "ROS clock seconds"
+  },
+  "time_sync": "ROS node time is stored as ros_time_s. Topic freshness and RT joins use local monotonic arrival time; RT topics have no header.",
+  "filtering": "none",
+  "missing_data": "Blank CSV cells mean unavailable or stale measurements.",
+  "safety": "Trajectory dimensions are unvalidated research examples and are never sufficient for real motion approval.",
+  "reference_frame": "base_link",
+  "preview_note": "AG145 TCP and A0509 links use the generated MuJoCo model; no ROS or robot connection.",
+  "movement_commands_sent": 0,
+  "gripper_type": "ag145",
+  "sim_model": "ag145_scene.xml",
+  "gripper_model": {
+    "configuration": "fixed open pose",
+    "mass_kg": 1.3,
+    "inertia": "uncalibrated box approximation",
+    "collision": "approximate bounding boxes",
+    "tcp_site": "ag145_tcp",
+    "tcp_offset_mm": [
+      0.0,
+      0.0,
+      200.0
+    ],
+    "tcp_calibrated": false
+  }
+}

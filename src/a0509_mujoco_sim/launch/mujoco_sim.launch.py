@@ -14,6 +14,9 @@ ARGUMENTS = [
     DeclareLaunchArgument('color', default_value='white', description='ROBOT_COLOR'),
     DeclareLaunchArgument('use_mujoco', default_value='true', description='Start Mujoco'),
     DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation time'),
+    DeclareLaunchArgument('mujoco_model_path', default_value=PathJoinSubstitution([
+        FindPackageShare('dsr_description2'), 'mujoco_models', 'a0509', 'scene.xml'
+    ]), description='MuJoCo scene XML; AG145 experiments pass a generated scene'),
 ]
 
 
@@ -42,9 +45,6 @@ def generate_launch_description():
     )
     robot_description = {'robot_description': robot_description_content}
 
-    mujoco_model_path = PathJoinSubstitution([
-        FindPackageShare('dsr_description2'), 'mujoco_models', 'a0509', 'scene.xml'
-    ])
     controller_param_file = PathJoinSubstitution([
         FindPackageShare('a0509_mujoco_sim'), 'config', 'a0509_mujoco_controller.yaml'
     ])
@@ -57,7 +57,7 @@ def generate_launch_description():
         parameters=[
             robot_description,
             controller_param_file,
-            {'mujoco_model_path': mujoco_model_path},
+            {'mujoco_model_path': LaunchConfiguration('mujoco_model_path')},
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
         ],
     )
