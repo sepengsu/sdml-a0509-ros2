@@ -1,0 +1,350 @@
+{
+  "created_utc": "2026-11-10T09:14:50.328520+00:00",
+  "dataset_version": "rbd_residual_v1",
+  "source": "offline MuJoCo inverse dynamics at recorded AG145 states plus analytic NEW_JOINT states",
+  "source_trials": {
+    "T1": {
+      "path": "results/ag145/simulation/T1/trial_005",
+      "dynamics_sha256": "849441d71ad2114723c139d7d1a1b408c142dfaa9ba0030bf584bc754de4bfae",
+      "rows": 200
+    },
+    "T2": {
+      "path": "results/ag145/simulation/T2/trial_001",
+      "dynamics_sha256": "3fb093733de52a070b1e5ecc549039e6d78886e8149c0fdbdd5a8cb515b02dca",
+      "rows": 200
+    },
+    "T3": {
+      "path": "results/ag145/simulation/T3/trial_001",
+      "dynamics_sha256": "950e1ca2f43e53a512ee2803fbb78cd4cb7fe685d3e57bbaa12dfe34db9999d9",
+      "rows": 680
+    },
+    "T4": {
+      "path": "results/ag145/simulation/T4/trial_001",
+      "dynamics_sha256": "55cfb3fc5043aaadcda3a67038ee534988da467570a18454338b29e4e2e10b2b",
+      "rows": 1480
+    }
+  },
+  "scene_sha256": {
+    "arm": "49407388eb6a0def5be483143bbbbc3145f655124e702b1889bbe0cf48b8d9f5",
+    "ag145": "c0c9095348c2606415272aece418b5df573d88144fa058302fa3eefdb0d76fca"
+  },
+  "recorded_ag145_max_abs_inverse_discrepancy_nm": {
+    "T1": 2.842170943040401e-14,
+    "T2": 2.842170943040401e-14,
+    "T3": 2.1316282072803006e-14,
+    "T4": 1.4210854715202004e-14
+  },
+  "mujoco_version": "3.2.7",
+  "stride": 5,
+  "splits": {
+    "train": 3456,
+    "validation": 864,
+    "test_new_trial": 960,
+    "test_unseen_trajectory": 5920,
+    "test_unseen_tool": 1080,
+    "test_mismatch_severity": 1480
+  },
+  "split_policy": {
+    "train_validation": "T1-T3 first 80% vs final 20% of each recorded trial; T4 wholly excluded",
+    "test_new_trial": "independently generated 8 s analytic six-joint trial; not ROS execution",
+    "test_unseen_trajectory": "all T4 recorded states, excluded from training and early stopping",
+    "test_unseen_tool": "virtual_unseen parameter combination on T1-T3 states; no training rows",
+    "test_mismatch_severity": "AG145 T4 subsample, nominal mass factors 0.6..1.0"
+  },
+  "tool_specs": {
+    "bare": {
+      "reference": {
+        "name": "bare",
+        "mass_kg": 0.0,
+        "com_local_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "role": "no_tool"
+      },
+      "nominal_0p8": {
+        "name": "bare",
+        "mass_kg": 0.0,
+        "com_local_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "role": "no_tool"
+      },
+      "reference_flange_10": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nominal_flange_10": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "ag145": {
+      "reference": {
+        "name": "ag145",
+        "mass_kg": 1.3,
+        "com_local_m": [
+          0.0,
+          0.0,
+          0.1
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.0073,
+          0.005,
+          0.0033
+        ],
+        "role": "existing_approximate_AG145_scene"
+      },
+      "nominal_0p8": {
+        "name": "ag145_nominal",
+        "mass_kg": 1.04,
+        "com_local_m": [
+          0.004999999999999999,
+          -0.004999999999999999,
+          0.09000000000000001
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.005475,
+          0.00375,
+          0.0024749999999999998
+        ],
+        "role": "synthetic_uncertain_estimate"
+      },
+      "reference_flange_10": [
+        1.3,
+        0.0,
+        0.0,
+        0.10000000000001669,
+        0.006149999999997677,
+        0.006150000000006425,
+        0.0033000000000011007,
+        0.0011500000000003831,
+        0.0,
+        0.0
+      ],
+      "nominal_flange_10": [
+        1.04,
+        0.007071067811866653,
+        1.3445562151534954e-14,
+        0.09000000000001501,
+        0.004612499999998258,
+        0.0046125000000048185,
+        0.0024750000000008255,
+        0.0008625000000002876,
+        0.0,
+        0.0
+      ]
+    },
+    "virtual_light": {
+      "reference": {
+        "name": "virtual_light",
+        "mass_kg": 0.9,
+        "com_local_m": [
+          0.01,
+          0.0,
+          0.08
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.0050538461538461536,
+          0.0034615384615384616,
+          0.0022846153846153845
+        ],
+        "role": "synthetic_train"
+      },
+      "nominal_0p8": {
+        "name": "virtual_light_nominal",
+        "mass_kg": 0.7200000000000001,
+        "com_local_m": [
+          0.015,
+          -0.004999999999999999,
+          0.07
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.003790384615384615,
+          0.002596153846153846,
+          0.0017134615384615383
+        ],
+        "role": "synthetic_uncertain_estimate"
+      },
+      "reference_flange_10": [
+        0.9,
+        0.007071067811853209,
+        0.0070710678118801,
+        0.08000000000001334,
+        0.0042576923076907,
+        0.004257692307696756,
+        0.002284615384616146,
+        0.0007961538461541115,
+        0.0,
+        0.0
+      ],
+      "nominal_flange_10": [
+        0.7200000000000001,
+        0.014142135623719862,
+        0.007071067811893545,
+        0.07000000000001168,
+        0.0031932692307680244,
+        0.0031932692307725663,
+        0.0017134615384621099,
+        0.0005971153846155836,
+        0.0,
+        0.0
+      ]
+    },
+    "virtual_heavy": {
+      "reference": {
+        "name": "virtual_heavy",
+        "mass_kg": 1.7,
+        "com_local_m": [
+          -0.01,
+          0.015,
+          0.12
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.009546153846153845,
+          0.006538461538461539,
+          0.004315384615384615
+        ],
+        "role": "synthetic_train"
+      },
+      "nominal_0p8": {
+        "name": "virtual_heavy_nominal",
+        "mass_kg": 1.36,
+        "com_local_m": [
+          -0.005000000000000001,
+          0.01,
+          0.11
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.007159615384615384,
+          0.0049038461538461545,
+          0.0032365384615384613
+        ],
+        "role": "synthetic_uncertain_estimate"
+      },
+      "reference_flange_10": [
+        1.7,
+        -0.017677669529673357,
+        0.0035355339058997133,
+        0.12000000000002001,
+        0.008042307692304655,
+        0.008042307692316092,
+        0.004315384615386055,
+        0.001503846153846654,
+        0.0,
+        0.0
+      ],
+      "nominal_flange_10": [
+        1.36,
+        -0.010606601717806705,
+        0.0035355339059131587,
+        0.11000000000001835,
+        0.006031730769228492,
+        0.00603173076923707,
+        0.0032365384615395403,
+        0.0011278846153849906,
+        0.0,
+        0.0
+      ]
+    },
+    "virtual_unseen": {
+      "reference": {
+        "name": "virtual_unseen",
+        "mass_kg": 1.5,
+        "com_local_m": [
+          0.015,
+          -0.01,
+          0.11
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.008423076923076922,
+          0.005769230769230769,
+          0.003807692307692307
+        ],
+        "role": "synthetic_test_only"
+      },
+      "nominal_0p8": {
+        "name": "virtual_unseen_nominal",
+        "mass_kg": 1.2000000000000002,
+        "com_local_m": [
+          0.019999999999999997,
+          -0.015,
+          0.1
+        ],
+        "diagonal_inertia_local_kg_m2": [
+          0.0063173076923076915,
+          0.004326923076923076,
+          0.0028557692307692303
+        ],
+        "role": "synthetic_uncertain_estimate"
+      },
+      "reference_flange_10": [
+        1.5,
+        0.017677669529659913,
+        0.00353553390596694,
+        0.11000000000001835,
+        0.007096153846151166,
+        0.007096153846161257,
+        0.003807692307693577,
+        0.0013269230769235188,
+        0.0,
+        0.0
+      ],
+      "nominal_flange_10": [
+        1.2000000000000002,
+        0.024748737341526564,
+        0.0035355339059803836,
+        0.10000000000001669,
+        0.005322115384613374,
+        0.005322115384620943,
+        0.0028557692307701827,
+        0.0009951923076926396,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "training_feature_policy": "KAN sees only q,dq,ddq and nominal flange parameters; true tool parameters and reference torque are labels/audit only",
+  "nominal_mismatch": "mass factor f; COM local offset (0.005,-0.005,-0.01)*(1-f)/0.2 m; inertia factor 1.25*f-0.25",
+  "units": {
+    "q": "rad",
+    "dq": "rad/s",
+    "ddq": "rad/s^2",
+    "torque": "Nm",
+    "tool_mass": "kg",
+    "tool_com": "m, link_6 frame",
+    "tool_inertia": "kg m^2, link_6 frame",
+    "time_s": "source MuJoCo simulation time or analytic trial time"
+  },
+  "torque_definition": "MuJoCo qfrc_inverse = M(q)ddq + qfrc_bias(q,dq) + dof_damping*dq; not measured sensor torque",
+  "warning": "virtual tools are synthetic inertial perturbations of the AG145 visual scene; no pneumatic gripper dynamics"
+}

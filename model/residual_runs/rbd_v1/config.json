@@ -1,0 +1,11 @@
+{
+  "dataset": "D:\\Code\\sdml-doosan-robot\\model\\residual_data\\rbd_v1",
+  "output": "D:\\Code\\sdml-doosan-robot\\model\\residual_runs\\rbd_v1",
+  "max_epochs": 100,
+  "patience": 15,
+  "batch_size": 128,
+  "learning_rate": 0.002,
+  "residual_lambda": 0.001,
+  "seed": 42,
+  "train_mlp": true
+}
