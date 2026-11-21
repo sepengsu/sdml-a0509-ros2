@@ -37,12 +37,13 @@ joint_limits:
     min_position: -3.14   
     max_position: 3.14   
   joint_5:
+    # Practice Home uses 115.02 deg (2.0075 rad); URDF upper limit is 2.617 rad.
     has_velocity_limits: true
     max_velocity: 6.98
     has_acceleration_limits: true
     max_acceleration: 1.396
-    min_position: -2.0  
-    max_position: 2.0   
+    min_position: -2.1
+    max_position: 2.1
   joint_6:
     has_velocity_limits: true
     max_velocity: 10.47

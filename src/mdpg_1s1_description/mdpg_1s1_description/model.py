@@ -91,7 +91,8 @@ def build_mdpg_scene(output: str | Path, mount_xyz, mount_rpy,
     include = scene.find("include")
     if include is None:
         raise ValueError("A0509 MuJoCo scene is missing its arm include")
-    arm = ET.parse(arm_scene.parent / include.attrib["file"]).getroot()
+    arm_model_path = (arm_scene.parent / include.attrib["file"]).resolve()
+    arm = ET.parse(arm_model_path).getroot()
     scene.remove(include)
     compiler = scene.find("compiler")
     if compiler is not None:
@@ -102,8 +103,10 @@ def build_mdpg_scene(output: str | Path, mount_xyz, mount_rpy,
     arm_worldbody = arm.find("worldbody")
     if any(item is None for item in (assets, worldbody, arm_assets, arm_worldbody)):
         raise ValueError("A0509 scene lacks assets or worldbody")
-    for mesh in arm_assets.findall("mesh"):
+    for mesh in assets.findall("mesh"):
         mesh.set("file", (arm_scene.parent.parent / mesh.attrib["file"]).resolve().as_posix())
+    for mesh in arm_assets.findall("mesh"):
+        mesh.set("file", (arm_model_path.parent.parent / mesh.attrib["file"]).resolve().as_posix())
     assets.extend(list(arm_assets))
     worldbody.extend(list(arm_worldbody))
     actuator = arm.find("actuator")

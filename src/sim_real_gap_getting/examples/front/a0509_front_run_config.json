@@ -1,0 +1,75 @@
+{
+  "experiment_id": "a0509_front_sim2real",
+  "sample_hz": 100,
+  "cycle_repeats": 10,
+  "repeat_mode": "one_setup_then_repeat_one_cycle_json",
+  "setup_file": "a0509_front_setup_10cm.json",
+  "setup_once_before_cycles": true,
+  "start_joint_rad": [
+    0.0,
+    -0.4,
+    1.4,
+    -0.07,
+    1.8,
+    0.7853981633974483
+  ],
+  "start_pose_source": "configured_previous_candidate; not live robot state",
+  "operating_lift_mm": 60.0,
+  "lower_obstacle_top_z_mm": null,
+  "planning_clearance_mm": 30.0,
+  "physical_corridor_y_mm": null,
+  "candidate_tool_variants": [
+    "ag145",
+    "mdpg_1s1"
+  ],
+  "gripper_clearance_audit_file": "a0509_front_gripper_clearance.json",
+  "segment_seconds": {
+    "f1_slow_forward": [
+      10.0,
+      10.0
+    ],
+    "f2_medium_forward": [
+      7.0,
+      7.0
+    ],
+    "f3_front_postures": [
+      9.0,
+      7.0,
+      10.0,
+      7.0,
+      9.0
+    ],
+    "f4_wrist_and_holds": [
+      9.0,
+      7.5,
+      7.5,
+      7.5,
+      7.5,
+      9.0
+    ]
+  },
+  "total_allowed_lateral_width_mm": 400.0,
+  "designed_tcp_lateral_band_mm": [
+    -40,
+    40
+  ],
+  "f3_tcp_lateral_offset_mm": 20.0,
+  "maximum_designed_forward_span_mm": 260.0,
+  "rear_wall_x_m": -0.35,
+  "gripper_type": "none",
+  "payload_mass_kg": 0.0,
+  "control_mode": "unverified_100hz_joint_stream",
+  "execution_scope": "simulation_only",
+  "real_auto_run": false,
+  "cycle_files": [
+    "a0509_front_f1_slow_forward.json",
+    "a0509_front_f2_medium_forward.json",
+    "a0509_front_f3_front_postures.json",
+    "a0509_front_f4_wrist_and_holds.json"
+  ],
+  "comparison_policy": {
+    "tracking_gap": "compare measured q with the same commanded path in simulation and real",
+    "dynamics_residual": "apply measured real q,dq,estimated ddq to matching MuJoCo model; compare only with a characterized real torque signal",
+    "torque_ground_truth_verified": false
+  }
+}

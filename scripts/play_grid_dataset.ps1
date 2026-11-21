@@ -6,10 +6,12 @@ param(
     [switch]$Pilot,
     [switch]$Play,
     [switch]$Status,
-    [ValidateSet('legacy','trajectory16')][string]$Campaign = 'legacy',
+    [ValidateSet('legacy','trajectory16','wide16')][string]$Campaign = 'legacy',
     [ValidateSet('all','T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12','T13','T14','T15','T16')][string]$Trajectory = 'all',
     [ValidateRange(1,2)][int]$MaxBatches = 2,
-    [ValidateRange(1,21)][int]$MaxRuns = 21,
+    [ValidateRange(1,70)][int]$MaxRuns = 21,
+    [ValidateRange(1,10)][int]$Trials = 3,
+    [ValidateRange(4,64)][int]$MemoryGb = 8,
     [string]$ResultsName = 'grid_4x4_7conditions',
     [string]$BaseContainer = 'a0509-dynamics',
     [switch]$UseCadFaceCenterFixture,
@@ -21,14 +23,22 @@ $ErrorActionPreference = 'Stop'
 if ($Campaign -eq 'trajectory16' -and -not $PSBoundParameters.ContainsKey('ResultsName')) {
     $ResultsName = 'grid_16_trajectories'
 }
-if ($Campaign -eq 'trajectory16' -and $Trajectory -ne 'all') {
-    throw 'The trajectory16 campaign assigns T1-T16 to all 16 lanes; use -Trajectory all.'
+if ($Campaign -eq 'wide16' -and -not $PSBoundParameters.ContainsKey('ResultsName')) {
+    $ResultsName = 'grid_16_wide_v3'
+}
+if ($Campaign -in @('trajectory16','wide16') -and $Trajectory -ne 'all') {
+    throw 'The 16-lane campaigns assign T1-T16 to all 16 lanes; use -Trajectory all.'
 }
 if ($ResultsName -notmatch '^[A-Za-z0-9_-]+$') { throw 'ResultsName must use letters, digits, _ or -.' }
 if ($BaseContainer -notmatch '^[A-Za-z0-9_.-]+$') { throw 'BaseContainer has unsupported characters.' }
+if ($Campaign -ne 'wide16' -and $Trials -ne 3) { throw '-Trials is supported only for wide16.' }
+if ($Campaign -eq 'wide16' -and -not $PSBoundParameters.ContainsKey('MaxRuns')) {
+    $MaxRuns = 7 * $Trials
+}
+if ($Campaign -ne 'wide16' -and $MaxRuns -gt 21) { throw '-MaxRuns above 21 is supported only for wide16.' }
 if (([int][bool]$Pilot + [int][bool]$Play + [int][bool]$Status) -gt 1) { throw 'Choose one of -Pilot, -Play, -Status.' }
 $repository = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$storageFolder = if ($Campaign -eq 'trajectory16') { 'data' } else { 'results' }
+$storageFolder = if ($Campaign -in @('trajectory16','wide16')) { 'data' } else { 'results' }
 $storageHost = Join-Path $repository $storageFolder
 $root = Join-Path $storageHost $ResultsName
 $name = "a0509-grid-$ResultsName"
@@ -43,6 +53,10 @@ if ($Status) {
     foreach ($file in @(Get-ChildItem -LiteralPath (Join-Path $root 'simulation') -Recurse -Filter metadata.json -File -ErrorAction SilentlyContinue)) {
         try {
             $item = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
+            if ($Campaign -eq 'wide16' -and $item.trial_id -match '^trial_(\d+)$' -and
+                [int]$Matches[1] -gt $Trials) { continue }
+            if ($Campaign -eq 'wide16' -and ($item.trajectory_config.profile -ne 'wide16_v3' -or
+                $item.quality.rows_written -ne 45201)) { continue }
             $bagMetadata = Join-Path $root (Join-Path $item.rosbag_relative_path 'metadata.yaml')
             if ($item.report.max_tracking_error_rad -le 0.05 -and $item.report.torque_limit_samples -eq 0 -and
                 $item.report.cross_robot_contacts -eq 0 -and
@@ -55,11 +69,12 @@ if ($Status) {
             }
         } catch { }
     }
-    $total = if ($Campaign -eq 'trajectory16') { 336 } else { 294 }
+    $total = if ($Campaign -eq 'wide16') { 7 * 16 * $Trials } elseif ($Campaign -eq 'trajectory16') { 336 } else { 294 }
     Write-Host "Full trials complete: $finished/$total"
-    if ($Campaign -eq 'trajectory16') {
+    if ($Campaign -in @('trajectory16','wide16')) {
         $scenesComplete = @($sceneGroups.Values | Where-Object { $_.Count -eq 16 }).Count
-        Write-Host "Scene executions complete: $scenesComplete/21"
+        $sceneTotal = if ($Campaign -eq 'wide16') { 7 * $Trials } else { 21 }
+        Write-Host "Scene executions complete: $scenesComplete/$sceneTotal"
     }
     & docker ps -a --filter "name=^/$name`$" --format 'table {{.Names}}\t{{.Status}}'
     if ($LASTEXITCODE -ne 0) { throw 'Docker status failed.' }
@@ -96,9 +111,17 @@ New-Item -ItemType Directory -Path $root -Force | Out-Null
 $declPath = Join-Path $root 'mount_declaration.json'
 if (Test-Path -LiteralPath $declPath) {
     $old = Get-Content -LiteralPath $declPath -Raw | ConvertFrom-Json
-    if ($old.source -ne $declaration.source -or $old.payload_spec_sha256 -ne $specHash -or
-        (@($old.xyz_m) -join ',') -ne (@($MdpgMountXyz) -join ',') -or
-        (@($old.rpy_rad) -join ',') -ne (@($MdpgMountRpy) -join ',')) {
+    $mountDiffers = @($old.xyz_m).Count -ne 3 -or @($old.rpy_rad).Count -ne 3
+    if (-not $mountDiffers) {
+        for ($i = 0; $i -lt 3; $i++) {
+            if ([math]::Abs([double]$old.xyz_m[$i] - $MdpgMountXyz[$i]) -gt 1e-12 -or
+                [math]::Abs([double]$old.rpy_rad[$i] - $MdpgMountRpy[$i]) -gt 1e-12) {
+                $mountDiffers = $true
+                break
+            }
+        }
+    }
+    if ($old.source -ne $declaration.source -or $old.payload_spec_sha256 -ne $specHash -or $mountDiffers) {
         throw 'Existing dataset has different tool mount or payload specification. Use another ResultsName.'
     }
 } else {
@@ -120,6 +143,14 @@ try {
     $active = @(& docker ps --filter 'label=a0509.collect.run' --format '{{.Names}}')
     if ($LASTEXITCODE -ne 0) { throw 'Docker daemon unavailable.' }
     if ($active.Count) { throw "Another A0509 collection is running: $($active -join ', ')" }
+    if ($Campaign -eq 'wide16') {
+        $memoryBytesText = & docker info --format '{{.MemTotal}}'
+        if ($LASTEXITCODE -ne 0) { throw 'Could not read Docker memory capacity.' }
+        $memoryBytes = [long]$memoryBytesText
+        $safeMemoryGb = [int][math]::Floor(($memoryBytes / 1GB) * 0.75)
+        if ($safeMemoryGb -lt 4) { throw 'Docker cannot give the collector 4 GB while keeping 25% memory free. Increase Docker Desktop memory.' }
+        $memoryLimitGb = [math]::Min($MemoryGb, $safeMemoryGb)
+    }
     $inspectText = & docker inspect $BaseContainer
     $base = @(($inspectText -join "`n" | ConvertFrom-Json))[0]
     if ($LASTEXITCODE -ne 0 -or $null -eq $base) { throw "Missing base container $BaseContainer" }
@@ -145,14 +176,26 @@ try {
     & docker exec $BaseContainer bash -lc $build
     if ($LASTEXITCODE -ne 0) { throw 'ROS2 package build failed.' }
     $mode = if ($Pilot) { '--pilot' } else { '--play' }
-    $command = "source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash && exec python3 -u -m a0509_dynamics_experiment.grid_simulation --results /ros2_ws/$storageFolder/$ResultsName --mount-xyz $($MdpgMountXyz -join ' ') --mount-rpy $($MdpgMountRpy -join ' ') --payload-spec /ros2_ws/src/a0509_dynamics_experiment/config/payload_conditions.json $mode --campaign $Campaign --trajectory $Trajectory --max-batches $MaxBatches --max-runs $MaxRuns"
+    $trialArg = if ($Campaign -eq 'wide16') { " --trials $Trials" } else { '' }
+    $pythonCommand = "python3 -X faulthandler -u -m a0509_dynamics_experiment.grid_simulation --results /ros2_ws/$storageFolder/$ResultsName --mount-xyz $($MdpgMountXyz -join ' ') --mount-rpy $($MdpgMountRpy -join ' ') --payload-spec /ros2_ws/src/a0509_dynamics_experiment/config/payload_conditions.json $mode --campaign $Campaign --trajectory $Trajectory --max-batches $MaxBatches --max-runs $MaxRuns$trialArg"
+    $setupCommand = 'source /opt/ros/humble/setup.bash && source /ros2_ws/install/setup.bash'
+    $command = if ($Play -and $Campaign -eq 'wide16') {
+        # A fresh Python process per scene releases MuJoCo/ROS/Python memory.
+        "$setupCommand && for ((run_index=0; run_index<$MaxRuns; run_index++)); do $pythonCommand --run-index `$run_index || exit `$?; done"
+    } else {
+        "$setupCommand && exec $pythonCommand"
+    }
     $oldContainer = @(& docker ps -a --filter "name=^/$name`$" --format '{{.Names}}')
     if ($oldContainer.Count) {
         & docker rm $name | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'Could not remove prior stopped grid container.' }
     }
-    $dockerArgs = @('run', '-d', '--name', $name, '--network', 'none',
-              '--label', "a0509.collect.run=$ResultsName",
+    $dockerArgs = @('run', '-d', '--name', $name, '--network', 'none')
+    if ($Campaign -eq 'wide16') {
+        $dockerArgs += @('--memory', "${memoryLimitGb}g", '--memory-swap', "${memoryLimitGb}g",
+                         '--cpus', '4', '--pids-limit', '256')
+    }
+    $dockerArgs += @('--label', "a0509.collect.run=$ResultsName",
               '--mount', "type=bind,source=$srcHost,destination=/ros2_ws/src,readonly",
               '--mount', "type=bind,source=$storageHost,destination=/ros2_ws/$storageFolder",
               '--mount', "type=volume,source=$($installMount[0].Name),destination=/ros2_ws/install,readonly",
@@ -161,8 +204,9 @@ try {
     & docker @dockerArgs
     if ($LASTEXITCODE -ne 0) { throw 'Could not start grid collector.' }
     Write-Host "Started $mode in $name. Output: $root"
+    if ($Campaign -eq 'wide16') { Write-Host "Docker limits: $memoryLimitGb GB RAM, 4 CPUs; one scene at a time." }
     Write-Host "Monitor: docker logs -f $name"
-    Write-Host "Status:  .\scripts\play_grid_dataset.ps1 -Campaign $Campaign -Status -ResultsName $ResultsName"
+    Write-Host "Status:  .\scripts\play_grid_dataset.ps1 -Campaign $Campaign -Status -ResultsName $ResultsName -Trials $Trials"
 } finally {
     $mutex.ReleaseMutex()
     $mutex.Dispose()

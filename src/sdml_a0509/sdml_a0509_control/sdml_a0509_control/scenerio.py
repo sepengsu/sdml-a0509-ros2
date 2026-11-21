@@ -6,7 +6,7 @@ from rclpy.node import Node
 from sdml_a0509_control.position_move import movejoint, moveline
 from sdml_a0509_control.utils import get_pick_place_config_path, get_pick_place_times_path
 
-DEFAULT_HOME_POSJ = [-41.36, -32.01, 84.97994995117188, -3.99, 115.02, 45.00]
+DEFAULT_HOME_POSJ = [0.0, -32.01, 84.97994995117188, -3.99, 115.02, 45.00]
 
 
 def _load_json(path, default=None):

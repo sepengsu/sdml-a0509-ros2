@@ -12,6 +12,7 @@ from .trajectory_generator import JOINT_NAMES
 RT_FIELDS = ("actual_joint_position", "actual_joint_velocity", "actual_motor_torque",
              "actual_joint_torque", "external_joint_torque", "actual_tcp_position",
              "target_joint_position", "joint_temperature", "time_stamp", "robot_state", "singularity")
+QUALITY_FIELDS = ("q1", "dq1", "ddq1", "tcp_position", "actual_motor_torque", "qfrc_inverse")
 TORQUE_DEFINITIONS = {
     "actual_motor_torque": "DRFL motor-current/gear conversion [Nm], not an independent torque sensor",
     "actual_joint_torque": "DRFL controller-estimated joint torque [Nm], not an independent torque sensor",
@@ -49,6 +50,8 @@ class DynamicsRecorder:
         self.topic_arrivals: dict[str, list[float]] = defaultdict(list)
         self.topic_source_times: dict[str, list[float]] = defaultdict(list)
         self.rows: list[dict[str, Any]] = []
+        self.rows_written = 0
+        self.blank_field_counts = {key: 0 for key in QUALITY_FIELDS}
         self._previous_real_dq: tuple[float, ...] | None = None
         self._previous_real_time: float | None = None
 
@@ -118,6 +121,10 @@ class DynamicsRecorder:
             if values is not None:
                 for i, value in enumerate(values[:6], 1):
                     row[f"{stem}{i}"] = float(value)
+        self.rows_written += 1
+        for key in QUALITY_FIELDS:
+            if row.get(key) is None:
+                self.blank_field_counts[key] += 1
         self.rows.append(row)
         return row
 
@@ -142,9 +149,6 @@ class DynamicsRecorder:
                                "wall_arrival_max_gap_s": wall["max_gap_s"]}
             else:
                 result[key] = {**wall, "time_basis": "arrival_wall_time"}
-        result["rows_written"] = len(self.rows)
-        result["blank_field_counts"] = {
-            key: sum(row.get(key) is None for row in self.rows)
-            for key in ("q1", "dq1", "ddq1", "tcp_position", "actual_motor_torque", "qfrc_inverse")
-        }
+        result["rows_written"] = self.rows_written
+        result["blank_field_counts"] = dict(self.blank_field_counts)
         return result

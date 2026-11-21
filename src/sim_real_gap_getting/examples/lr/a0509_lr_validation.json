@@ -1,0 +1,717 @@
+{
+  "status": "simulation_only",
+  "model_scene": "D:\\Code\\sdml-doosan-robot\\src\\doosan-robot2\\dsr_description2\\mujoco_models\\a0509\\scene_forward_wall.xml",
+  "assumed_tcp": "bare link_6 origin; physical tool unknown",
+  "rear_wall_x_m": -0.35,
+  "lateral_axis": "DR_BASE Y",
+  "configured_half_width_mm": 100.0,
+  "configured_center_offset_mm": 0.0,
+  "setup_forward_mm": 100.0,
+  "configured_start_joint_rad": [
+    0.0,
+    -0.4,
+    1.4,
+    -0.07,
+    1.8,
+    0.7853981633974483
+  ],
+  "physical_workspace_verified": false,
+  "physical_gripper_verified": false,
+  "real_current_pose_verified": false,
+  "real_100hz_interface_verified": false,
+  "real_robot_executable": false,
+  "notes": [
+    "MuJoCo model includes the bare arm, floor and x=-0.35 m rear wall.",
+    "Other lab obstacles and the mounted tool geometry are unknown.",
+    "Original practice J5=115.02 deg is within the 2.1 rad configured limit but only about 0.093 rad below it; the default candidate uses 1.8 rad.",
+    "No real robot command was sent."
+  ],
+  "setup": {
+    "sample_count": 1001,
+    "duration_s": 10.0,
+    "tcp_min_mm": [
+      190.94,
+      -8.393,
+      614.348
+    ],
+    "tcp_max_mm": [
+      290.94,
+      -8.392,
+      617.264
+    ],
+    "tcp_span_mm": [
+      100.0,
+      0.001,
+      2.916
+    ],
+    "tcp_center_mm": [
+      190.94,
+      -8.392,
+      614.348
+    ],
+    "model_link_origin_y_range_mm": [
+      -8.393,
+      0.109
+    ],
+    "minimum_weighted_jacobian_singular_value": 0.096783,
+    "max_velocity_rad_s": [
+      1.3e-05,
+      0.045301,
+      0.030872,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "max_acceleration_rad_s2": [
+      4e-06,
+      0.013949,
+      0.009506,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "max_jerk_rad_s3": [
+      4e-06,
+      0.014496,
+      0.009879,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "position_min_rad": [
+      0.0,
+      -0.4,
+      1.23535,
+      -0.07,
+      1.8,
+      0.785398
+    ],
+    "position_max_rad": [
+      7e-05,
+      -0.158393,
+      1.4,
+      -0.07,
+      1.8,
+      0.785398
+    ],
+    "model_contact_checks": 1001,
+    "time_grid_passed": true,
+    "derivative_check_passed": true,
+    "boundary_rest_passed": true,
+    "cycle_boundary_c2_passed": false,
+    "model_collision_free": true,
+    "joint_and_kinematic_checks_passed": true,
+    "intervals": [
+      {
+        "kind": "forward_100mm",
+        "start_s": 0.0,
+        "end_s": 10.0
+      }
+    ],
+    "simulation_preflight": {
+      "passed": true,
+      "max_tracking_error_rad": 0.000241,
+      "max_command_nm": 40.2555,
+      "torque_limit_samples": 0,
+      "contact_steps": 0,
+      "simulated_100hz_setpoints": 1000,
+      "controller": "MuJoCo inverse dynamics + 150/20 PD, 2 ms physics step"
+    },
+    "simulation_usable": true,
+    "real_robot_executable": false,
+    "json": "a0509_lr_forward_10cm_setup.json",
+    "preview": "a0509_lr_forward_10cm_setup_preview.png"
+  },
+  "paths": {
+    "p1_slow": {
+      "sample_count": 3201,
+      "duration_s": 32.0,
+      "tcp_min_mm": [
+        290.94,
+        -108.392,
+        614.348
+      ],
+      "tcp_max_mm": [
+        295.196,
+        91.608,
+        614.46
+      ],
+      "tcp_span_mm": [
+        4.256,
+        200.0,
+        0.112
+      ],
+      "tcp_center_mm": [
+        290.94,
+        -8.392,
+        614.348
+      ],
+      "model_link_origin_y_range_mm": [
+        -108.392,
+        91.608
+      ],
+      "minimum_weighted_jacobian_singular_value": 0.154086,
+      "max_velocity_rad_s": [
+        0.077945,
+        0.011009,
+        0.009306,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_acceleration_rad_s2": [
+        0.030001,
+        0.004237,
+        0.003582,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_jerk_rad_s3": [
+        0.038972,
+        0.005505,
+        0.004653,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "position_min_rad": [
+        -0.329517,
+        -0.158393,
+        1.195642,
+        -0.07,
+        1.8,
+        0.785398
+      ],
+      "position_max_rad": [
+        0.332635,
+        -0.111421,
+        1.23535,
+        -0.07,
+        1.8,
+        0.785398
+      ],
+      "model_contact_checks": 3201,
+      "time_grid_passed": true,
+      "derivative_check_passed": true,
+      "boundary_rest_passed": true,
+      "cycle_boundary_c2_passed": true,
+      "model_collision_free": true,
+      "joint_and_kinematic_checks_passed": true,
+      "intervals": [
+        {
+          "kind": "motion",
+          "index": 1,
+          "start_s": 0.0,
+          "end_s": 8.0
+        },
+        {
+          "kind": "motion",
+          "index": 2,
+          "start_s": 8.0,
+          "end_s": 16.0
+        },
+        {
+          "kind": "motion",
+          "index": 3,
+          "start_s": 16.0,
+          "end_s": 24.0
+        },
+        {
+          "kind": "motion",
+          "index": 4,
+          "start_s": 24.0,
+          "end_s": 32.0
+        }
+      ],
+      "simulation_preflight": {
+        "passed": true,
+        "max_tracking_error_rad": 0.000424,
+        "max_command_nm": 62.4126,
+        "torque_limit_samples": 0,
+        "contact_steps": 0,
+        "simulated_100hz_setpoints": 3200,
+        "controller": "MuJoCo inverse dynamics + 150/20 PD, 2 ms physics step"
+      },
+      "simulation_usable": true,
+      "real_robot_executable": false,
+      "json": "a0509_lr_p1_slow.json",
+      "preview": "a0509_lr_p1_slow_preview.png",
+      "repeat_preview": "a0509_lr_p1_slow_repeats_preview.png"
+    },
+    "p2_medium": {
+      "sample_count": 2001,
+      "duration_s": 20.0,
+      "tcp_min_mm": [
+        290.94,
+        -108.392,
+        614.348
+      ],
+      "tcp_max_mm": [
+        295.196,
+        91.608,
+        614.46
+      ],
+      "tcp_span_mm": [
+        4.256,
+        200.0,
+        0.112
+      ],
+      "tcp_center_mm": [
+        290.94,
+        -8.392,
+        614.348
+      ],
+      "model_link_origin_y_range_mm": [
+        -108.392,
+        91.608
+      ],
+      "minimum_weighted_jacobian_singular_value": 0.154086,
+      "max_velocity_rad_s": [
+        0.124712,
+        0.017615,
+        0.01489,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_acceleration_rad_s2": [
+        0.076802,
+        0.010848,
+        0.00917,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_jerk_rad_s3": [
+        0.159631,
+        0.022547,
+        0.01906,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "position_min_rad": [
+        -0.329517,
+        -0.158393,
+        1.195642,
+        -0.07,
+        1.8,
+        0.785398
+      ],
+      "position_max_rad": [
+        0.332635,
+        -0.111421,
+        1.23535,
+        -0.07,
+        1.8,
+        0.785398
+      ],
+      "model_contact_checks": 2001,
+      "time_grid_passed": true,
+      "derivative_check_passed": true,
+      "boundary_rest_passed": true,
+      "cycle_boundary_c2_passed": true,
+      "model_collision_free": true,
+      "joint_and_kinematic_checks_passed": true,
+      "intervals": [
+        {
+          "kind": "motion",
+          "index": 1,
+          "start_s": 0.0,
+          "end_s": 5.0
+        },
+        {
+          "kind": "motion",
+          "index": 2,
+          "start_s": 5.0,
+          "end_s": 10.0
+        },
+        {
+          "kind": "motion",
+          "index": 3,
+          "start_s": 10.0,
+          "end_s": 15.0
+        },
+        {
+          "kind": "motion",
+          "index": 4,
+          "start_s": 15.0,
+          "end_s": 20.0
+        }
+      ],
+      "simulation_preflight": {
+        "passed": true,
+        "max_tracking_error_rad": 0.000663,
+        "max_command_nm": 99.8616,
+        "torque_limit_samples": 0,
+        "contact_steps": 0,
+        "simulated_100hz_setpoints": 2000,
+        "controller": "MuJoCo inverse dynamics + 150/20 PD, 2 ms physics step"
+      },
+      "simulation_usable": true,
+      "real_robot_executable": false,
+      "json": "a0509_lr_p2_medium.json",
+      "preview": "a0509_lr_p2_medium_preview.png",
+      "repeat_preview": "a0509_lr_p2_medium_repeats_preview.png"
+    },
+    "p3_variable": {
+      "sample_count": 2501,
+      "duration_s": 25.0,
+      "tcp_min_mm": [
+        290.94,
+        -108.392,
+        614.348
+      ],
+      "tcp_max_mm": [
+        295.196,
+        91.608,
+        614.46
+      ],
+      "tcp_span_mm": [
+        4.256,
+        200.0,
+        0.112
+      ],
+      "tcp_center_mm": [
+        290.94,
+        -8.392,
+        614.348
+      ],
+      "model_link_origin_y_range_mm": [
+        -108.392,
+        91.608
+      ],
+      "minimum_weighted_jacobian_singular_value": 0.154086,
+      "max_velocity_rad_s": [
+        0.124712,
+        0.017615,
+        0.01489,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_acceleration_rad_s2": [
+        0.076802,
+        0.010848,
+        0.00917,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_jerk_rad_s3": [
+        0.159631,
+        0.022547,
+        0.01906,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "position_min_rad": [
+        -0.329517,
+        -0.158393,
+        1.195642,
+        -0.07,
+        1.8,
+        0.785398
+      ],
+      "position_max_rad": [
+        0.332635,
+        -0.111421,
+        1.23535,
+        -0.07,
+        1.8,
+        0.785398
+      ],
+      "model_contact_checks": 2501,
+      "time_grid_passed": true,
+      "derivative_check_passed": true,
+      "boundary_rest_passed": true,
+      "cycle_boundary_c2_passed": true,
+      "model_collision_free": true,
+      "joint_and_kinematic_checks_passed": true,
+      "intervals": [
+        {
+          "kind": "motion",
+          "index": 1,
+          "start_s": 0.0,
+          "end_s": 8.0
+        },
+        {
+          "kind": "motion",
+          "index": 2,
+          "start_s": 8.0,
+          "end_s": 13.0
+        },
+        {
+          "kind": "motion",
+          "index": 3,
+          "start_s": 13.0,
+          "end_s": 20.0
+        },
+        {
+          "kind": "motion",
+          "index": 4,
+          "start_s": 20.0,
+          "end_s": 25.0
+        }
+      ],
+      "simulation_preflight": {
+        "passed": true,
+        "max_tracking_error_rad": 0.000637,
+        "max_command_nm": 99.8608,
+        "torque_limit_samples": 0,
+        "contact_steps": 0,
+        "simulated_100hz_setpoints": 2500,
+        "controller": "MuJoCo inverse dynamics + 150/20 PD, 2 ms physics step"
+      },
+      "simulation_usable": true,
+      "real_robot_executable": false,
+      "json": "a0509_lr_p3_variable.json",
+      "preview": "a0509_lr_p3_variable_preview.png",
+      "repeat_preview": "a0509_lr_p3_variable_repeats_preview.png"
+    },
+    "p4_reversal": {
+      "sample_count": 2601,
+      "duration_s": 26.0,
+      "tcp_min_mm": [
+        290.94,
+        -108.392,
+        614.348
+      ],
+      "tcp_max_mm": [
+        295.196,
+        91.608,
+        614.46
+      ],
+      "tcp_span_mm": [
+        4.256,
+        200.0,
+        0.112
+      ],
+      "tcp_center_mm": [
+        290.94,
+        -8.392,
+        614.348
+      ],
+      "model_link_origin_y_range_mm": [
+        -108.392,
+        91.608
+      ],
+      "minimum_weighted_jacobian_singular_value": 0.154086,
+      "max_velocity_rad_s": [
+        0.103926,
+        0.014679,
+        0.012409,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_acceleration_rad_s2": [
+        0.053335,
+        0.007533,
+        0.006368,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "max_jerk_rad_s3": [
+        0.092379,
+        0.013048,
+        0.01103,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "position_min_rad": [
+        -0.329517,
+        -0.158393,
+        1.195642,
+        -0.07,
+        1.8,
+        0.785398
+      ],
+      "position_max_rad": [
+        0.332635,
+        -0.111421,
+        1.23535,
+        -0.07,
+        1.8,
+        0.785398
+      ],
+      "model_contact_checks": 2601,
+      "time_grid_passed": true,
+      "derivative_check_passed": true,
+      "boundary_rest_passed": true,
+      "cycle_boundary_c2_passed": true,
+      "model_collision_free": true,
+      "joint_and_kinematic_checks_passed": true,
+      "intervals": [
+        {
+          "kind": "motion",
+          "index": 1,
+          "start_s": 0.0,
+          "end_s": 6.0
+        },
+        {
+          "kind": "hold",
+          "start_s": 6.0,
+          "end_s": 7.0
+        },
+        {
+          "kind": "motion",
+          "index": 2,
+          "start_s": 7.0,
+          "end_s": 13.0
+        },
+        {
+          "kind": "motion",
+          "index": 3,
+          "start_s": 13.0,
+          "end_s": 19.0
+        },
+        {
+          "kind": "hold",
+          "start_s": 19.0,
+          "end_s": 20.0
+        },
+        {
+          "kind": "motion",
+          "index": 4,
+          "start_s": 20.0,
+          "end_s": 26.0
+        }
+      ],
+      "simulation_preflight": {
+        "passed": true,
+        "max_tracking_error_rad": 0.000559,
+        "max_command_nm": 83.2172,
+        "torque_limit_samples": 0,
+        "contact_steps": 0,
+        "simulated_100hz_setpoints": 2600,
+        "controller": "MuJoCo inverse dynamics + 150/20 PD, 2 ms physics step"
+      },
+      "simulation_usable": true,
+      "real_robot_executable": false,
+      "json": "a0509_lr_p4_reversal.json",
+      "preview": "a0509_lr_p4_reversal_preview.png",
+      "repeat_preview": "a0509_lr_p4_reversal_repeats_preview.png"
+    },
+    "p5_multijoint": {
+      "sample_count": 2801,
+      "duration_s": 28.0,
+      "tcp_min_mm": [
+        284.447,
+        -103.087,
+        608.257
+      ],
+      "tcp_max_mm": [
+        297.994,
+        90.119,
+        620.853
+      ],
+      "tcp_span_mm": [
+        13.547,
+        193.206,
+        12.595
+      ],
+      "tcp_center_mm": [
+        290.94,
+        -8.392,
+        614.348
+      ],
+      "model_link_origin_y_range_mm": [
+        -103.087,
+        90.119
+      ],
+      "minimum_weighted_jacobian_singular_value": 0.153273,
+      "max_velocity_rad_s": [
+        0.080172,
+        0.011324,
+        0.014929,
+        0.016071,
+        0.010714,
+        0.021429
+      ],
+      "max_acceleration_rad_s2": [
+        0.035266,
+        0.004981,
+        0.006567,
+        0.00707,
+        0.004713,
+        0.009426
+      ],
+      "max_jerk_rad_s3": [
+        0.052357,
+        0.007395,
+        0.00975,
+        0.010496,
+        0.006997,
+        0.013994
+      ],
+      "position_min_rad": [
+        -0.296558,
+        -0.158393,
+        1.179613,
+        -0.13,
+        1.76,
+        0.705398
+      ],
+      "position_max_rad": [
+        0.299378,
+        -0.116118,
+        1.23535,
+        -0.01,
+        1.84,
+        0.865398
+      ],
+      "model_contact_checks": 2801,
+      "time_grid_passed": true,
+      "derivative_check_passed": true,
+      "boundary_rest_passed": true,
+      "cycle_boundary_c2_passed": true,
+      "model_collision_free": true,
+      "joint_and_kinematic_checks_passed": true,
+      "intervals": [
+        {
+          "kind": "motion",
+          "index": 1,
+          "start_s": 0.0,
+          "end_s": 7.0
+        },
+        {
+          "kind": "motion",
+          "index": 2,
+          "start_s": 7.0,
+          "end_s": 14.0
+        },
+        {
+          "kind": "motion",
+          "index": 3,
+          "start_s": 14.0,
+          "end_s": 21.0
+        },
+        {
+          "kind": "motion",
+          "index": 4,
+          "start_s": 21.0,
+          "end_s": 28.0
+        }
+      ],
+      "simulation_preflight": {
+        "passed": true,
+        "max_tracking_error_rad": 0.000433,
+        "max_command_nm": 64.1961,
+        "torque_limit_samples": 0,
+        "contact_steps": 0,
+        "simulated_100hz_setpoints": 2800,
+        "controller": "MuJoCo inverse dynamics + 150/20 PD, 2 ms physics step"
+      },
+      "simulation_usable": true,
+      "real_robot_executable": false,
+      "json": "a0509_lr_p5_multijoint.json",
+      "preview": "a0509_lr_p5_multijoint_preview.png",
+      "repeat_preview": "a0509_lr_p5_multijoint_repeats_preview.png"
+    }
+  }
+}

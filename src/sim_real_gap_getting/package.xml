@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>sim_real_gap_getting</name>
+  <version>0.1.0</version>
+  <description>JSON trajectory simulation GUI and guarded 100 Hz real practice for A0509</description>
+  <maintainer email="na06219@naver.com">SDML</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>dsr_msgs2</exec_depend>
+  <exec_depend>a0509_mujoco_sim</exec_depend>
+  <exec_depend>dsr_description2</exec_depend>
+  <exec_depend>a0509_dynamics_experiment</exec_depend>
+  <exec_depend>dh_ag145_description</exec_depend>
+  <exec_depend>mdpg_1s1_description</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+  <exec_depend>python3-tk</exec_depend>
+  <test_depend>python3-pytest</test_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

@@ -86,6 +86,34 @@ def test_simulation_quality_uses_simulation_clock():
     assert quality["estimated_missing_rate"] == 0
 
 
+def test_chunked_dynamics_matches_full_export_and_preserves_quality(tmp_path):
+    recorder = DynamicsRecorder("simulation", "T1", "trial_001", "none", 0.0)
+    full, chunked = tmp_path / "full", tmp_path / "chunked"
+    full.mkdir()
+    chunked.mkdir()
+    save_dynamics((), chunked, filename="dynamics.csv.partial")
+    all_rows = []
+    for index in range(2001):
+        sim_s = index / 100
+        recorder.ingest_joint_state(JOINT_NAMES, [0.0] * 6, [0.0] * 6,
+                                    arrival_s=sim_s, source_time_s=sim_s + 1e-6)
+        row = recorder.snapshot(100.0 + sim_s, sim_s, [0.0] * 6,
+                                {"qacc": (0.0,) * 6, "tcp_position": (1.0, 2.0, 3.0),
+                                 "qfrc_inverse": (0.0,) * 6}, arrival_s=sim_s)
+        all_rows.append(row)
+        if (index + 1) % 1000 == 0:
+            save_dynamics(recorder.rows, chunked, filename="dynamics.csv.partial", append=True)
+            recorder.rows.clear()
+    save_dynamics(recorder.rows, chunked, filename="dynamics.csv.partial", append=True)
+    recorder.rows.clear()
+    save_dynamics(all_rows, full)
+    assert (chunked / "dynamics.csv.partial").read_bytes() == (full / "dynamics.csv").read_bytes()
+    quality = recorder.quality()
+    assert quality["rows_written"] == 2001
+    assert quality["blank_field_counts"]["q1"] == 0
+    assert quality["blank_field_counts"]["actual_motor_torque"] == 2001
+
+
 def test_real_motion_fail_closed_and_no_motion_interface():
     reasons = validate_real_execution(TrajectoryConfig("T1"), {})
     assert any("collision" in reason for reason in reasons)

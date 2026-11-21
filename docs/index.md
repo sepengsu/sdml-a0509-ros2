@@ -13,6 +13,7 @@ Docker 기반 두산 A0509 로봇 제어 환경입니다. Windows, macOS, Linux�
 | [CONFIGURATION.md](./CONFIGURATION.md) | 환경 변수 및 설정 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 시스템 아키텍처 |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | 문제 해결 |
+| [trajectories-t1-t16.html](./trajectories-t1-t16.html) | T1~T16 궤적 표와 목표 경로 그래프 |
 
 ---
 

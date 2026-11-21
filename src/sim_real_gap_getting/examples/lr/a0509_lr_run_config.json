@@ -1,0 +1,106 @@
+{
+  "experiment_id": "a0509_lr_sim2real",
+  "sample_hz": 100,
+  "cycle_repeats": 10,
+  "repeat_mode": "one_cycle_json_plus_config",
+  "expanded_json_generated": false,
+  "setup_file": "a0509_lr_forward_10cm_setup.json",
+  "setup_once_before_cycles": true,
+  "setup_forward_mm": 100.0,
+  "start_joint_rad": [
+    0.0,
+    -0.4,
+    1.4,
+    -0.07,
+    1.8,
+    0.7853981633974483
+  ],
+  "start_pose_source": "configured_candidate; not read from live robot",
+  "cycle_segment_seconds": {
+    "p1_slow": [
+      8.0,
+      8.0,
+      8.0,
+      8.0
+    ],
+    "p2_medium": [
+      5.0,
+      5.0,
+      5.0,
+      5.0
+    ],
+    "p3_variable": [
+      8.0,
+      5.0,
+      7.0,
+      5.0
+    ],
+    "p4_reversal": [
+      6.0,
+      6.0,
+      6.0,
+      6.0
+    ],
+    "p5_multijoint": [
+      7.0,
+      7.0,
+      7.0,
+      7.0
+    ]
+  },
+  "lateral_axis": "DR_BASE Y",
+  "half_width_mm": 100.0,
+  "center_offset_mm": 0.0,
+  "maximum_total_lateral_width_mm": 300,
+  "supported_half_width_mm": [
+    100,
+    120
+  ],
+  "rear_wall_x_m": -0.35,
+  "gripper_type": "none",
+  "payload_mass_kg": 0.0,
+  "control_mode": "unverified_100hz_joint_stream",
+  "execution_scope": "simulation_only",
+  "real_auto_run": false,
+  "cycle_files": [
+    "a0509_lr_p1_slow.json",
+    "a0509_lr_p2_medium.json",
+    "a0509_lr_p3_variable.json",
+    "a0509_lr_p4_reversal.json",
+    "a0509_lr_p5_multijoint.json"
+  ],
+  "record_schema": [
+    "experiment_id",
+    "cycle_index",
+    "mode",
+    "command_time_s",
+    "measurement_time_s",
+    "target_q_rad",
+    "target_dq_rad_s",
+    "target_ddq_rad_s2",
+    "actual_q_rad",
+    "actual_dq_rad_s",
+    "actual_ddq_est_rad_s2",
+    "torque_signal",
+    "torque_signal_definition",
+    "gripper_type",
+    "payload_mass_kg",
+    "control_mode"
+  ],
+  "analysis_policy": {
+    "tracking_error": "compare target_q_rad with actual_q_rad per joint",
+    "dynamics_gap": "apply actual q, dq and estimated ddq at measurement time to the matching MuJoCo condition; compare qfrc_inverse with a separately characterized real torque signal",
+    "torque_ground_truth_verified": false,
+    "split_metrics": [
+      "joint_tracking_error",
+      "torque_model_residual"
+    ]
+  },
+  "stop_conditions": [
+    "communication_loss",
+    "stale_feedback",
+    "joint_limit_margin",
+    "protective_stop",
+    "unexpected_tracking_error"
+  ]
+}

@@ -23,6 +23,7 @@
   <exec_depend>dsr_moveit_config_a0509</exec_depend>
   <exec_depend>sdml_a0509_control</exec_depend>
   <exec_depend>a0509_dynamics_experiment</exec_depend>
+  <exec_depend>sim_real_gap_getting</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

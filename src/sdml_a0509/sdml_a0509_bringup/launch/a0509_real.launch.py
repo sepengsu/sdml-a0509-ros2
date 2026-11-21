@@ -14,6 +14,9 @@ def _validate_tool(context):
     selected = LaunchConfiguration("gripper_type").perform(context)
     if selected not in ("ag145", "mdpg_1s1"):
         raise RuntimeError(f"Unsupported real gripper_type: {selected}")
+    experiment_only = LaunchConfiguration("experiment_only").perform(context)
+    if experiment_only not in ("true", "false"):
+        raise RuntimeError("experiment_only must be true or false")
     if selected == "mdpg_1s1":
         for key in ("mdpg_mount_xyz", "mdpg_mount_rpy"):
             value = LaunchConfiguration(key).perform(context)
@@ -33,10 +36,15 @@ def generate_launch_description():
     jog_string_topic = LaunchConfiguration("jog_string_topic")
     jog_multi_axis_topic = LaunchConfiguration("jog_multi_axis_topic")
     gripper_type = LaunchConfiguration("gripper_type")
+    experiment_only = LaunchConfiguration("experiment_only")
     mdpg_mount_xyz = LaunchConfiguration("mdpg_mount_xyz")
     mdpg_mount_rpy = LaunchConfiguration("mdpg_mount_rpy")
-    ag145 = IfCondition(PythonExpression(["'", gripper_type, "' == 'ag145'"]))
-    mdpg = IfCondition(PythonExpression(["'", gripper_type, "' == 'mdpg_1s1'"]))
+    ag145_scenario = IfCondition(PythonExpression([
+        "'", gripper_type, "' == 'ag145' and '", experiment_only, "' == 'false'"
+    ]))
+    rt_state_only = IfCondition(PythonExpression([
+        "'", gripper_type, "' == 'mdpg_1s1' or '", experiment_only, "' == 'true'"
+    ]))
 
     declare_host = DeclareLaunchArgument(
         "host",
@@ -47,7 +55,7 @@ def generate_launch_description():
     declare_gui = DeclareLaunchArgument(
         "gui",
         default_value="true",
-        description="Start RViz2",
+        description="Start the real collection GUI in experiment mode; RViz otherwise",
     )
     declare_rt_host = DeclareLaunchArgument(
         "rt_host", default_value="192.168.137.50", description="Robot RT interface host IP"
@@ -80,12 +88,12 @@ def generate_launch_description():
             "rt_host": rt_host,
             "gui": gui,
         }.items(),
-        condition=ag145,
+        condition=ag145_scenario,
     )
 
-    # mDPG has no validated suction IO or tool dynamics. Bring up arm RT state
-    # and visualization only; omit AG145 control and motion scenario nodes.
-    mdpg_real_launch = IncludeLaunchDescription(
+    # Research mode brings up RT state for either tool without pick-and-place,
+    # gripper commands or jogging. Motion is started only from the collector GUI.
+    rt_state_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(PathJoinSubstitution([
             FindPackageShare("a0509_dynamics_experiment"), "launch", "real_rt.launch.py"
         ])),
@@ -93,15 +101,25 @@ def generate_launch_description():
             "host": host, "rt_host": rt_host, "gripper_type": gripper_type,
             "mdpg_mount_xyz": mdpg_mount_xyz, "mdpg_mount_rpy": mdpg_mount_rpy,
         }.items(),
-        condition=mdpg,
+        condition=rt_state_only,
     )
-    mdpg_rviz = Node(
+    experiment_rviz = Node(
         package="rviz2", executable="rviz2", name="rviz2", output="screen",
         arguments=["-d", PathJoinSubstitution([
             FindPackageShare("sdml_a0509_description"), "rviz", "a0509_tool.rviz"
         ])],
         condition=IfCondition(PythonExpression([
-            "'", gripper_type, "' == 'mdpg_1s1' and '", gui, "' == 'true'"
+            "'", gripper_type, "' == 'mdpg_1s1' and '", experiment_only,
+            "' == 'false' and '", gui, "' == 'true'"
+        ])),
+    )
+    front_real_collector = Node(
+        package="sim_real_gap_getting", executable="front_real_gui",
+        name="front_real_collector_gui", output="screen",
+        arguments=["--tool", gripper_type, "--lock-tool",
+                   "--mount-xyz", mdpg_mount_xyz, "--mount-rpy", mdpg_mount_rpy],
+        condition=IfCondition(PythonExpression([
+            "'", experiment_only, "' == 'true' and '", gui, "' == 'true'"
         ])),
     )
 
@@ -114,7 +132,7 @@ def generate_launch_description():
             "input_topic": jog_string_topic,
             "output_topic": jog_multi_axis_topic,
         }],
-        condition=ag145,
+        condition=ag145_scenario,
     )
 
     jogging_node = Node(
@@ -127,13 +145,15 @@ def generate_launch_description():
             "jog_multi_service": "/motion/jog_multi",
             "move_stop_service": "/motion/move_stop",
         }],
-        condition=ag145,
+        condition=ag145_scenario,
     )
 
     return LaunchDescription([
         declare_host,
         declare_rt_host,
         DeclareLaunchArgument("gripper_type", default_value="ag145", description="ag145 | mdpg_1s1"),
+        DeclareLaunchArgument("experiment_only", default_value="false",
+                              description="true: RT state only, no pick-and-place or jogging nodes"),
         DeclareLaunchArgument("mdpg_mount_xyz", default_value="TODO_MEASURE"),
         DeclareLaunchArgument("mdpg_mount_rpy", default_value="TODO_MEASURE"),
         declare_gui,
@@ -143,8 +163,9 @@ def generate_launch_description():
         OpaqueFunction(function=_validate_tool),
 
         pick_and_place_launch,
-        mdpg_real_launch,
-        mdpg_rviz,
+        rt_state_launch,
+        experiment_rviz,
+        front_real_collector,
         jog_string_bridge,
         jogging_node,
     ])

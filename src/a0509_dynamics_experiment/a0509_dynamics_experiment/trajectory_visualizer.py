@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 from typing import Sequence
 
-from .trajectory_generator import TrajectoryPlan, is_joint_trajectory
+from .trajectory_generator import TrajectoryPlan
 from .urdf_kinematics import A0509Urdf, find_a0509_urdf
 
 
@@ -26,7 +26,7 @@ def save_trajectory_plot(plan: TrajectoryPlan, folder: Path,
                          robot_snapshots_mm: Sequence[Sequence[Sequence[float]]] | None = None,
                          planned_xyz_mm: Sequence[Sequence[float]] | None = None) -> None:
     plt = _plot()
-    joint = is_joint_trajectory(plan.config.trajectory_id)
+    joint = plan.points[0].q_rad is not None
     urdf_path = find_a0509_urdf()
     urdf = A0509Urdf(urdf_path) if urdf_path else None
     fig = plt.figure(figsize=(12, 7))

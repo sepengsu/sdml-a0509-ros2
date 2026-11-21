@@ -18,6 +18,7 @@
         - actual_joint_velocity
         - actual_motor_torque
         - actual_joint_torque
+        - gravity_torque
         - external_joint_torque
         - actual_tcp_position
         - target_joint_position

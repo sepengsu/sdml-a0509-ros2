@@ -1,0 +1,538 @@
+{
+  "status": "planned_target_diagnostic_only",
+  "sample_hz": 100,
+  "source": "100 Hz commanded joint trajectories; no measured robot samples",
+  "f1_f2_same_geometric_joint_path": true,
+  "torque_term_method": "MuJoCo mass matrix times target ddq; separately report joint damping coefficient times target dq",
+  "real_torque_noise_measured": false,
+  "physical_tool_dynamics_calibrated": false,
+  "full_six_axis_dynamics_identification_validated": false,
+  "paths": {
+    "f1_slow_forward": {
+      "duration_s": 20.0,
+      "sample_count": 2001,
+      "joint_position_span_rad": [
+        7.2e-05,
+        0.527624,
+        0.61597,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_velocity_peak_rad_s": [
+        1.3e-05,
+        0.098929,
+        0.115494,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_velocity_rms_rad_s": [
+        9e-06,
+        0.063047,
+        0.073604,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_acceleration_peak_rad_s2": [
+        4e-06,
+        0.030462,
+        0.035563,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_acceleration_rms_rad_s2": [
+        3e-06,
+        0.02184,
+        0.025497,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "moving_sample_fraction": [
+        0.0,
+        0.9825,
+        0.9845,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "f2_medium_forward": {
+      "duration_s": 14.0,
+      "sample_count": 1401,
+      "joint_position_span_rad": [
+        7.2e-05,
+        0.527624,
+        0.61597,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_velocity_peak_rad_s": [
+        1.9e-05,
+        0.141328,
+        0.164992,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_velocity_rms_rad_s": [
+        1.2e-05,
+        0.090058,
+        0.105137,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_acceleration_peak_rad_s2": [
+        8e-06,
+        0.062168,
+        0.072578,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_acceleration_rms_rad_s2": [
+        6e-06,
+        0.044567,
+        0.05203,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "moving_sample_fraction": [
+        0.0,
+        0.9864,
+        0.9864,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "f3_front_postures": {
+      "duration_s": 44.0,
+      "sample_count": 4401,
+      "joint_position_span_rad": [
+        0.048696,
+        0.560519,
+        0.727478,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_velocity_peak_rad_s": [
+        0.010145,
+        0.066092,
+        0.090451,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_velocity_rms_rad_s": [
+        0.003772,
+        0.034724,
+        0.043596,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_acceleration_peak_rad_s2": [
+        0.003471,
+        0.028665,
+        0.039788,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "joint_acceleration_rms_rad_s2": [
+        0.001409,
+        0.015131,
+        0.01936,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "moving_sample_fraction": [
+        0.5487,
+        0.925,
+        0.9332,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "f4_wrist_and_holds": {
+      "duration_s": 50.0,
+      "sample_count": 5001,
+      "joint_position_span_rad": [
+        7.2e-05,
+        0.527624,
+        0.61597,
+        0.3,
+        0.24,
+        0.6
+      ],
+      "joint_velocity_peak_rad_s": [
+        1.5e-05,
+        0.109922,
+        0.128327,
+        0.075,
+        0.06,
+        0.075
+      ],
+      "joint_velocity_rms_rad_s": [
+        6e-06,
+        0.042038,
+        0.049077,
+        0.029274,
+        0.023419,
+        0.037029
+      ],
+      "joint_acceleration_peak_rad_s2": [
+        5e-06,
+        0.037608,
+        0.043905,
+        0.030792,
+        0.024633,
+        0.030792
+      ],
+      "joint_acceleration_rms_rad_s2": [
+        2e-06,
+        0.01618,
+        0.01889,
+        0.013521,
+        0.010817,
+        0.017103
+      ],
+      "moving_sample_fraction": [
+        0.0,
+        0.3547,
+        0.3547,
+        0.5871,
+        0.5855,
+        0.5895
+      ]
+    }
+  },
+  "models": {
+    "ag145": {
+      "scene": "D:\\Code\\sdml-doosan-robot\\results\\front_gripper_preflight\\ag145_scene.xml",
+      "joint_damping_nm_s_rad": [
+        800.0,
+        800.0,
+        800.0,
+        600.0,
+        600.0,
+        600.0
+      ],
+      "joint_frictionloss_nm": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "tool_model_calibrated": false,
+      "paths": {
+        "f1_slow_forward": {
+          "model_inertia_torque_rms_nm": [
+            0.00657,
+            0.053797,
+            0.009747,
+            0.001278,
+            0.002823,
+            2e-06
+          ],
+          "model_inertia_torque_peak_nm": [
+            0.00945,
+            0.079599,
+            0.018171,
+            0.002227,
+            0.004554,
+            3e-06
+          ],
+          "model_damping_torque_rms_nm": [
+            0.006852,
+            50.437883,
+            58.883234,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "model_damping_torque_peak_nm": [
+            0.010752,
+            79.14358,
+            92.395431,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "f2_medium_forward": {
+          "model_inertia_torque_rms_nm": [
+            0.013407,
+            0.109779,
+            0.019889,
+            0.002608,
+            0.005761,
+            4e-06
+          ],
+          "model_inertia_torque_peak_nm": [
+            0.019285,
+            0.162446,
+            0.037083,
+            0.004544,
+            0.009294,
+            5e-06
+          ],
+          "model_damping_torque_rms_nm": [
+            0.009788,
+            72.046404,
+            84.109899,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "model_damping_torque_peak_nm": [
+            0.015361,
+            113.062257,
+            131.993473,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "f3_front_postures": {
+          "model_inertia_torque_rms_nm": [
+            0.004475,
+            0.035255,
+            0.005839,
+            0.000816,
+            0.001986,
+            9e-06
+          ],
+          "model_inertia_torque_peak_nm": [
+            0.009451,
+            0.066238,
+            0.013508,
+            0.001918,
+            0.003902,
+            2.2e-05
+          ],
+          "model_damping_torque_rms_nm": [
+            3.017275,
+            27.778813,
+            34.877054,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "model_damping_torque_peak_nm": [
+            8.116033,
+            52.873458,
+            72.360662,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "f4_wrist_and_holds": {
+          "model_inertia_torque_rms_nm": [
+            0.005713,
+            0.039961,
+            0.007558,
+            0.001933,
+            0.002335,
+            0.000135
+          ],
+          "model_inertia_torque_peak_nm": [
+            0.011666,
+            0.09827,
+            0.022433,
+            0.003904,
+            0.005622,
+            0.000289
+          ],
+          "model_damping_torque_rms_nm": [
+            0.004569,
+            33.630298,
+            39.261376,
+            17.564445,
+            14.051556,
+            22.217461
+          ],
+          "model_damping_torque_peak_nm": [
+            0.011947,
+            87.937311,
+            102.66159,
+            45.0,
+            36.0,
+            45.0
+          ]
+        }
+      }
+    },
+    "mdpg_1s1": {
+      "scene": "D:\\Code\\sdml-doosan-robot\\results\\front_gripper_preflight\\mdpg_scene.xml",
+      "joint_damping_nm_s_rad": [
+        800.0,
+        800.0,
+        800.0,
+        600.0,
+        600.0,
+        600.0
+      ],
+      "joint_frictionloss_nm": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "tool_model_calibrated": false,
+      "paths": {
+        "f1_slow_forward": {
+          "model_inertia_torque_rms_nm": [
+            0.006682,
+            0.051477,
+            0.009657,
+            0.00135,
+            0.001323,
+            1e-06
+          ],
+          "model_inertia_torque_peak_nm": [
+            0.009611,
+            0.075645,
+            0.017454,
+            0.002351,
+            0.002137,
+            2e-06
+          ],
+          "model_damping_torque_rms_nm": [
+            0.006852,
+            50.437883,
+            58.883234,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "model_damping_torque_peak_nm": [
+            0.010752,
+            79.14358,
+            92.395431,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "f2_medium_forward": {
+          "model_inertia_torque_rms_nm": [
+            0.013635,
+            0.105044,
+            0.019707,
+            0.002755,
+            0.002699,
+            2e-06
+          ],
+          "model_inertia_torque_peak_nm": [
+            0.019615,
+            0.154376,
+            0.03562,
+            0.004799,
+            0.004361,
+            3e-06
+          ],
+          "model_damping_torque_rms_nm": [
+            0.009788,
+            72.046404,
+            84.109899,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "model_damping_torque_peak_nm": [
+            0.015361,
+            113.062257,
+            131.993473,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "f3_front_postures": {
+          "model_inertia_torque_rms_nm": [
+            0.004507,
+            0.033809,
+            0.005923,
+            0.000843,
+            0.000923,
+            6e-06
+          ],
+          "model_inertia_torque_peak_nm": [
+            0.009442,
+            0.063287,
+            0.013191,
+            0.001918,
+            0.001797,
+            1.4e-05
+          ],
+          "model_damping_torque_rms_nm": [
+            3.017275,
+            27.778813,
+            34.877054,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "model_damping_torque_peak_nm": [
+            8.116033,
+            52.873458,
+            72.360662,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "f4_wrist_and_holds": {
+          "model_inertia_torque_rms_nm": [
+            0.005179,
+            0.038228,
+            0.007342,
+            0.001401,
+            0.001074,
+            8.6e-05
+          ],
+          "model_inertia_torque_peak_nm": [
+            0.011866,
+            0.093388,
+            0.021548,
+            0.002903,
+            0.002638,
+            0.000184
+          ],
+          "model_damping_torque_rms_nm": [
+            0.004569,
+            33.630298,
+            39.261376,
+            17.564445,
+            14.051556,
+            22.217461
+          ],
+          "model_damping_torque_peak_nm": [
+            0.011947,
+            87.937311,
+            102.66159,
+            45.0,
+            36.0,
+            45.0
+          ]
+        }
+      }
+    }
+  }
+}

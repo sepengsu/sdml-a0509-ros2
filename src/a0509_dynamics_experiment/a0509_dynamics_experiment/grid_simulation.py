@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import shutil
 import time
 import xml.etree.ElementTree as ET
 
@@ -22,9 +23,10 @@ from .dynamics_logger import DynamicsRecorder, TORQUE_DEFINITIONS
 from .payload_model import attach_payload, load_payload_spec
 from .simulation_executor import MujocoObserver
 from .trajectory_generator import (BASE_HOME, EXCITATIONS, JOINT_NAMES, TrajectoryConfig,
-                                   generate, is_joint_trajectory)
+                                   generate)
 from .t16_fourier import spec_path as t16_fourier_spec_path
 from .trajectory_visualizer import save_dynamics_plot, save_trajectory_plot
+from .wide16_trajectory import SPLITS as WIDE16_SPLITS, generate_wide
 
 CONDITIONS = (
     ("bare_p0", "none", 0.0),
@@ -159,27 +161,36 @@ def _lane_ids(mj, model, lane):
                         if (mj.mj_id2name(model, mj.mjtObj.mjOBJ_BODY, i) or "").startswith(prefix)]
 
 
-def _plan(observer, trajectory_id):
+def _plan(observer, trajectory_id, campaign="legacy"):
     import numpy as np
-    if trajectory_id in ("T1", "T2", "T3"):
+    if campaign == "wide16":
+        plan = generate_wide(trajectory_id)
+        # The full grid checks contacts at every physics step. Avoid a second
+        # 45,201-sample MuJoCo FK pass just to build an optional plot.
+        targets = [point.q_rad for point in plan.points]
+        tcp = []
+    elif trajectory_id in ("T1", "T2", "T3"):
         observer.set_ik_reference(BASE_HOME)
         # The model's high passive damping makes the default 4 s Cartesian
         # segments incompatible with the stated wrist torque limits.
         config = TrajectoryConfig(trajectory_id, reference_tcp_mm=observer.tcp_mm(BASE_HOME),
                                   segment_seconds=10.0, time_scale=GRID_TIME_SCALE[trajectory_id])
+        plan = generate(config)
     else:
         config = TrajectoryConfig(trajectory_id, joint_start_rad=BASE_HOME if trajectory_id == "T4" else (0.0,) * 6,
                                   time_scale=GRID_TIME_SCALE[trajectory_id])
-    plan = generate(config)
-    if is_joint_trajectory(trajectory_id):
-        validate_joint_plan(plan, observer)
-    targets, tcp = [], []
-    previous = plan.points[0].q_rad or BASE_HOME
-    for point in plan.points:
-        q = point.q_rad if point.q_rad is not None else _precise_ik(observer, point.xyz_mm, previous)
-        tcp.append(observer.require_contact_free(q))
-        targets.append(q)
-        previous = q
+        plan = generate(config)
+    joint_plan = plan.points[0].q_rad is not None
+    if joint_plan:
+        validate_joint_plan(plan)
+    if campaign != "wide16":
+        targets, tcp = [], []
+        previous = plan.points[0].q_rad or BASE_HOME
+        for point in plan.points:
+            q = point.q_rad if point.q_rad is not None else _precise_ik(observer, point.xyz_mm, previous)
+            tcp.append(observer.require_contact_free(q))
+            targets.append(q)
+            previous = q
     if plan.points[0].dq_rad_s is None:
         from scipy.signal import savgol_filter
         positions = np.asarray(targets)
@@ -283,7 +294,8 @@ def _physics(mj, model, data, inverse_data, lane, full_mass):
 
 
 def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajectory_id: str | None,
-                  batch_index: int, columns: int, pilot: bool = False) -> dict:
+                  batch_index: int, columns: int, pilot: bool = False,
+                  campaign: str = "legacy") -> dict:
     import mujoco as mj
     import numpy as np
     model_name = (f"batch_{batch_index:02d}.xml" if trajectory_id else
@@ -301,9 +313,11 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
             raise ValueError("each mixed lane needs a trajectory ID")
         cache_key = (lane["condition"], lane["trajectory_id"])
         if cache_key not in plan_cache:
-            tool = "mdpg_tcp" if lane["gripper"] == "mdpg_1s1" else "ag145_tcp"
-            observer = MujocoObserver(scenes[lane["condition"]], tcp_site=tool)
-            plan_cache[cache_key] = _plan(observer, lane["trajectory_id"])
+            observer = None
+            if campaign != "wide16":
+                tool = "mdpg_tcp" if lane["gripper"] == "mdpg_1s1" else "ag145_tcp"
+                observer = MujocoObserver(scenes[lane["condition"]], tcp_site=tool)
+            plan_cache[cache_key] = _plan(observer, lane["trajectory_id"], campaign)
         (lane["plan"], lane["targets"], lane["planned_tcp"],
          lane["target_dq"], lane["target_ddq"]) = plan_cache[cache_key]
         lane["recorder"] = DynamicsRecorder("simulation", lane["trajectory_id"],
@@ -325,6 +339,12 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
                  (Path(lanes[0]["condition"]) / f"trial_{lanes[0]['repeat']:03d}"))
     bag = root / "bags" / bag_group / f"run_{int(time.time())}"
     bag.parent.mkdir(parents=True, exist_ok=True)
+    if campaign == "wide16":
+        for lane in lanes:
+            lane["folder"] = (root / "simulation" / lane["trajectory_id"] /
+                              lane["condition"] / f"trial_{lane['repeat']:03d}")
+            lane["folder"].mkdir(parents=True, exist_ok=True)
+            save_dynamics((), lane["folder"], filename="dynamics.csv.partial")
     writer = _bag_writer(bag)
     max_error, max_command, cross_contacts, torque_limit_samples = 0.0, 0.0, 0, 0
     max_command_by_joint = [0.0] * 6
@@ -406,6 +426,16 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
             recorder.snapshot(time.time(), sim_s, lane["target"],
                               _physics(mj, model, data, inverse_data, lane, full_mass), arrival_s=sim_s)
         _bag_sample(writer, sim_s, lanes, data)
+        if campaign == "wide16" and (sample + 1) % 1000 == 0:
+            for lane in lanes:
+                save_dynamics(lane["recorder"].rows, lane["folder"],
+                              filename="dynamics.csv.partial", append=True)
+                lane["recorder"].rows.clear()
+    if campaign == "wide16":
+        for lane in lanes:
+            save_dynamics(lane["recorder"].rows, lane["folder"],
+                          filename="dynamics.csv.partial", append=True)
+            lane["recorder"].rows.clear()
     del writer
     if not (bag / "metadata.yaml").is_file():
         raise RuntimeError("shared ROS bag did not finalize")
@@ -425,30 +455,41 @@ def collect_batch(root: Path, scenes: dict[str, Path], lanes: list[dict], trajec
         lane_trajectory = lane["trajectory_id"]
         folder = root / "simulation" / lane_trajectory / lane["condition"] / f"trial_{lane['repeat']:03d}"
         folder.mkdir(parents=True, exist_ok=True)
-        save_trajectory(lane["plan"], folder)
-        save_dynamics(lane["recorder"].rows, folder)
-        measured = [row["tcp_position"] for row in lane["recorder"].rows]
-        measured_joint = [tuple(row[f"q{i}"] for i in range(1, 7)) for row in lane["recorder"].rows]
-        save_trajectory_plot(lane["plan"], folder, measured_xyz_mm=measured,
-                             measured_joint_rad=measured_joint,
-                             measured_time_s=[i / 100 for i in range(len(lane["plan"].points))],
-                             planned_xyz_mm=lane["planned_tcp"] if is_joint_trajectory(lane_trajectory) else None)
-        save_dynamics_plot(lane["recorder"].rows, folder)
+        save_trajectory(lane["plan"], folder, include_json=campaign != "wide16")
+        if campaign == "wide16":
+            (folder / "dynamics.csv.partial").replace(folder / "dynamics.csv")
+        else:
+            save_dynamics(lane["recorder"].rows, folder)
+        if campaign != "wide16":
+            measured = [row["tcp_position"] for row in lane["recorder"].rows]
+            measured_joint = [tuple(row[f"q{i}"] for i in range(1, 7)) for row in lane["recorder"].rows]
+            save_trajectory_plot(lane["plan"], folder, measured_xyz_mm=measured,
+                                 measured_joint_rad=measured_joint,
+                                 measured_time_s=[i / 100 for i in range(len(lane["plan"].points))],
+                                 planned_xyz_mm=lane["planned_tcp"] if lane["plan"].points[0].q_rad is not None else None)
+            save_dynamics_plot(lane["recorder"].rows, folder)
         save_metadata(folder, lane["plan"], "simulation", f"trial_{lane['repeat']:03d}", {
             "condition_id": lane["condition"], "gripper_type": lane["gripper"],
             "payload_mass_kg": lane["payload_kg"], "quality": lane["recorder"].quality(),
-            "dataset_split": EXCITATIONS[lane_trajectory]["split"] if lane_trajectory in EXCITATIONS else "diagnostic",
+            "dataset_split": (WIDE16_SPLITS[lane_trajectory] if campaign == "wide16" else
+                              EXCITATIONS[lane_trajectory]["split"] if lane_trajectory in EXCITATIONS else "diagnostic"),
             "physics_source": "direct MuJoCo state in one isolated multi-robot MjModel",
             "sim_initialization": "Each lane qpos is set to its own first target before the first sample; no setup movement is recorded.",
-            "trajectory_design_origin": ("A0509 project extension motivated by state-space coverage in Zhang et al., 2026; not a trajectory specified by that paper"
+            "trajectory_design_origin": ("wide16_v2 simulation-only repeated joint excitation"
+                                         if campaign == "wide16" else
+                                         "A0509 project extension motivated by state-space coverage in Zhang et al., 2026; not a trajectory specified by that paper"
                                          if lane_trajectory in ("T15", "T16") else
                                          "existing A0509 project trajectory; not a trajectory specified by Zhang et al., 2026"),
             "study_reference_doi": "10.1016/j.knosys.2026.116861",
             "controller": "inverse-dynamics feedforward plus 150 Nm/rad position and 20 Nm s/rad velocity feedback, clipped to MJCF joint force limits; qfrc_applied stores external controller effort",
             "torque_definitions": TORQUE_DEFINITIONS,
             "time_sync": "sample index / 100 Hz is MuJoCo time; wall timestamp is recorded separately",
-            "target_joint_derivative_method": "T1-T3: 51-sample fifth-order Savitzky-Golay derivative of precise IK targets; T4-T16: analytic joint trajectory derivatives",
-            "grid_time_scale": GRID_TIME_SCALE[lane_trajectory],
+            "target_joint_derivative_method": ("analytic sinusoidal derivatives" if campaign == "wide16" else
+                                               "T1-T3: 51-sample fifth-order Savitzky-Golay derivative of precise IK targets; T4-T16: analytic joint trajectory derivatives"),
+            "grid_time_scale": 1.0 if campaign == "wide16" else GRID_TIME_SCALE[lane_trajectory],
+            "campaign": campaign,
+            "artifact_profile": ("csv_and_bag_without_per_trial_plots_or_trajectory_json"
+                                 if campaign == "wide16" else "full"),
             "rosbag": str(bag), "rosbag_relative_path": bag.relative_to(root).as_posix(),
             "rosbag_topics": ["/clock", "/joint_states", "/target_joint_states"],
             "grid": {"batch": batch_index, "lane": lane["prefix"], "base_xy_m": lane["base_xy_m"],
@@ -469,17 +510,27 @@ def main(argv=None):
     parser.add_argument("--payload-spec", type=Path, required=True)
     parser.add_argument("--pilot", action="store_true")
     parser.add_argument("--play", action="store_true")
-    parser.add_argument("--campaign", choices=("legacy", "trajectory16"), default="legacy")
+    parser.add_argument("--campaign", choices=("legacy", "trajectory16", "wide16"), default="legacy")
     parser.add_argument("--max-batches", type=int, default=2)
-    parser.add_argument("--max-runs", type=int, default=21)
+    parser.add_argument("--max-runs", type=int)
+    parser.add_argument("--trials", type=int, default=3)
+    parser.add_argument("--run-index", type=int)
     parser.add_argument("--trajectory", choices=("all", *(f"T{i}" for i in range(1, 17))), default="all")
     args = parser.parse_args(argv)
     if args.pilot == args.play:
         parser.error("choose exactly one of --pilot or --play")
-    if args.campaign == "trajectory16" and args.trajectory != "all":
-        parser.error("trajectory16 always assigns T1-T16 to the 16 lanes")
-    if args.max_runs < 1 or args.max_runs > 21:
-        parser.error("max-runs must be between 1 and 21")
+    if args.campaign in ("trajectory16", "wide16") and args.trajectory != "all":
+        parser.error("16-lane campaigns always assign T1-T16 to the 16 lanes")
+    if args.trials < 1 or args.trials > 10 or (args.campaign != "wide16" and args.trials != 3):
+        parser.error("trials must be 1-10 for wide16 and 3 for other campaigns")
+    total_runs = len(CONDITIONS) * (args.trials if args.campaign == "wide16" else 3)
+    if args.max_runs is None:
+        args.max_runs = total_runs
+    if args.max_runs < 1 or args.max_runs > total_runs:
+        parser.error(f"max-runs must be between 1 and {total_runs}")
+    if args.run_index is not None and (not args.play or args.campaign != "wide16"
+                                       or not 0 <= args.run_index < args.max_runs):
+        parser.error("--run-index requires wide16 --play and a scene index below --max-runs")
     if not all(math.isfinite(v) for v in (*args.mount_xyz, *args.mount_rpy)):
         parser.error("mount values must be finite")
     root = args.results.resolve()
@@ -492,19 +543,23 @@ def main(argv=None):
     if args.campaign == "trajectory16":
         fingerprint_paths.extend((Path(__file__).with_name("t16_fourier.py"),
                                   t16_fourier_spec_path()))
+    if args.campaign == "wide16":
+        fingerprint_paths.append(Path(__file__).with_name("wide16_trajectory.py"))
     for path in fingerprint_paths:
         fingerprint_hash.update(path.read_bytes())
     fingerprint = fingerprint_hash.hexdigest()
     if args.pilot:
-        if args.campaign == "trajectory16":
+        if args.campaign in ("trajectory16", "wide16"):
             c, g, p = CONDITIONS[2]  # mixed-duration pilot with one tool/payload condition
             lanes = [dict(condition=c, gripper=g, payload_kg=p, repeat=1, trajectory=t)
                      for t in ("T1", "T5", "T15", "T16")]
-            report = collect_batch(root / "pilot", scenes, lanes, None, 0, 2, pilot=True)
+            report = collect_batch(root / "pilot", scenes, lanes, None, 0, 2,
+                                   pilot=True, campaign=args.campaign)
         else:
             lanes = [dict(condition=c, gripper=g, payload_kg=p, repeat=1)
                      for c, g, p in (CONDITIONS[0], CONDITIONS[2], CONDITIONS[4], CONDITIONS[6])]
-            report = collect_batch(root / "pilot", scenes, lanes, "T5", 0, 2, pilot=True)
+            report = collect_batch(root / "pilot", scenes, lanes, "T5", 0, 2,
+                                   pilot=True, campaign=args.campaign)
         report["pass"] = (report["max_tracking_error_rad"] <= 0.05
                           and report["cross_robot_contacts"] == 0
                           and report["torque_limit_samples"] == 0)
@@ -532,23 +587,32 @@ def main(argv=None):
             return (bag_path.is_relative_to(root) and (bag_path / "metadata.yaml").is_file()
                     and report["max_tracking_error_rad"] <= 0.05
                     and report["torque_limit_samples"] == 0
-                    and report["cross_robot_contacts"] == 0)
+                    and report["cross_robot_contacts"] == 0
+                    and (args.campaign != "wide16" or
+                         (metadata.get("trajectory_config", {}).get("profile") == "wide16_v3"
+                          and metadata.get("quality", {}).get("rows_written") == 45201)))
         except (KeyError, ValueError, OSError, TypeError):
             return False
-    if args.campaign == "trajectory16":
-        runs = [(c, g, p, repeat) for c, g, p in CONDITIONS for repeat in range(1, 4)]
+    if args.campaign in ("trajectory16", "wide16"):
+        repeats = args.trials if args.campaign == "wide16" else 3
+        runs = [(c, g, p, repeat) for c, g, p in CONDITIONS for repeat in range(1, repeats + 1)]
         for run_index, (condition, gripper, payload, repeat) in enumerate(runs):
             if run_index >= args.max_runs:
                 break
+            if args.run_index is not None and run_index != args.run_index:
+                continue
             lanes = [dict(condition=condition, gripper=gripper, payload_kg=payload,
                           repeat=repeat, trajectory=f"T{i}") for i in range(1, 17)]
             folders = [root / "simulation" / lane["trajectory"] / condition /
                        f"trial_{repeat:03d}" for lane in lanes]
             if all(complete(folder) for folder in folders):
-                print(f"skip complete scene {run_index+1}/21: {condition} repeat {repeat}", flush=True)
+                print(f"skip complete scene {run_index+1}/{len(runs)}: {condition} repeat {repeat}", flush=True)
                 continue
-            print(f"collect scene {run_index+1}/21: {condition} repeat {repeat}, T1-T16 in parallel", flush=True)
-            report = collect_batch(root, scenes, lanes, None, run_index, 4)
+            if args.campaign == "wide16" and shutil.disk_usage(root).free < 10 * 1024**3:
+                raise RuntimeError("Less than 10 GiB free for the next wide16 scene; free disk space before resuming")
+            print(f"collect scene {run_index+1}/{len(runs)}: {condition} repeat {repeat}, T1-T16 in parallel", flush=True)
+            report = collect_batch(root, scenes, lanes, None, run_index, 4,
+                                   campaign=args.campaign)
             print(json.dumps(report), flush=True)
         return 0
     for batch_index, start in enumerate(range(0, len(shards), 16)):
@@ -563,7 +627,8 @@ def main(argv=None):
                 print(f"skip completed batch {batch_index} {trajectory}", flush=True)
                 continue
             print(f"collect batch {batch_index} {trajectory}: {len(lanes)} lanes", flush=True)
-            report = collect_batch(root, scenes, lanes, trajectory, batch_index, 4)
+            report = collect_batch(root, scenes, lanes, trajectory, batch_index, 4,
+                                   campaign=args.campaign)
             print(json.dumps(report), flush=True)
     return 0
 

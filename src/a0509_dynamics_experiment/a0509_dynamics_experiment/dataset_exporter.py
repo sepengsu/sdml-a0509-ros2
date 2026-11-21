@@ -49,7 +49,7 @@ def _sequence(row: dict[str, Any], prefix: str, values: tuple[float, ...] | None
             row[f"{prefix}{i}_rad" if prefix == "q" else f"{prefix}{i}_rad_s" if prefix == "dq" else f"{prefix}{i}_rad_s2"] = value
 
 
-def save_trajectory(plan: TrajectoryPlan, folder: Path) -> None:
+def save_trajectory(plan: TrajectoryPlan, folder: Path, *, include_json: bool = True) -> None:
     with (folder / "trajectory.csv").open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=TRAJECTORY_COLUMNS)
         writer.writeheader()
@@ -64,7 +64,8 @@ def save_trajectory(plan: TrajectoryPlan, folder: Path) -> None:
             _sequence(row, "dq", point.dq_rad_s)
             _sequence(row, "ddq", point.ddq_rad_s2)
             writer.writerow(row)
-    (folder / "trajectory.json").write_text(json.dumps(plan.as_dict(), indent=2) + "\n", encoding="utf-8")
+    if include_json:
+        (folder / "trajectory.json").write_text(json.dumps(plan.as_dict(), indent=2) + "\n", encoding="utf-8")
     with (folder / "waypoints.csv").open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=TRAJECTORY_COLUMNS)
         writer.writeheader()
@@ -82,11 +83,16 @@ def _csv_value(value: Any) -> Any:
     return value
 
 
-def save_dynamics(rows: Iterable[dict[str, Any]], folder: Path) -> int:
+def save_dynamics(rows: Iterable[dict[str, Any]], folder: Path, *,
+                  filename: str = "dynamics.csv", append: bool = False) -> int:
     count = 0
-    with (folder / "dynamics.csv").open("w", newline="", encoding="utf-8") as stream:
+    path = folder / filename
+    if append and not path.is_file():
+        raise FileNotFoundError(f"cannot append dynamics before header: {path}")
+    with path.open("a" if append else "w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=DYNAMICS_COLUMNS, extrasaction="ignore")
-        writer.writeheader()
+        if not append:
+            writer.writeheader()
         for row in rows:
             writer.writerow({key: _csv_value(row.get(key)) for key in DYNAMICS_COLUMNS})
             count += 1

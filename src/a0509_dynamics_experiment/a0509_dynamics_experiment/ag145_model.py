@@ -140,7 +140,8 @@ def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
     include = scene.find("include")
     if include is None:
         raise ValueError("A0509 scene does not include the arm model")
-    arm_model = ET.parse(arm_scene.parent / include.attrib["file"]).getroot()
+    arm_model_path = (arm_scene.parent / include.attrib["file"]).resolve()
+    arm_model = ET.parse(arm_model_path).getroot()
     scene.remove(include)
     compiler = scene.find("compiler")
     if compiler is not None:
@@ -149,13 +150,15 @@ def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
     worldbody = scene.find("worldbody")
     if assets is None or worldbody is None:
         raise ValueError("A0509 scene missing assets or worldbody")
+    for mesh in assets.findall("mesh"):
+        mesh.set("file", (arm_scene.parent.parent / mesh.attrib["file"]).resolve().as_posix())
     arm_assets = arm_model.find("asset")
     arm_worldbody = arm_model.find("worldbody")
     if arm_assets is None or arm_worldbody is None:
         raise ValueError("A0509 arm model missing assets or worldbody")
     for mesh in arm_assets.findall("mesh"):
         relative = mesh.attrib["file"]
-        mesh.set("file", (arm_scene.parent.parent / relative).resolve().as_posix())
+        mesh.set("file", (arm_model_path.parent.parent / relative).resolve().as_posix())
     assets.extend(list(arm_assets))
     worldbody.extend(list(arm_worldbody))
     actuator = arm_model.find("actuator")
