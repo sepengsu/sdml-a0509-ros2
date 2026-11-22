@@ -151,6 +151,44 @@ ros2 run sim_real_gap_getting collect_front_batch \
 두 모델 모두 선택하면 8개 데이터 파일을 만듭니다. 실제 공간과 장착 치수가
 검증되지 않았으므로 이 배치 결과는 `simulation_only`로 기록됩니다.
 
+CLI의 `--tool`은 `mdpg_1s1`, `ag145`, `none`, `both`를 지원합니다.
+`none`은 그리퍼를 붙이지 않은 원본 A0509 장면을 사용합니다. 단일 모델을
+선택하면 해당 모델만 사전 검사·수집합니다. `both`는 기존처럼 AG145와
+mDPG 두 모델을 의미합니다. `--repeats 3`은 경로마다 준비 이동 1회 후
+3사이클을 연속 기록하므로 모델당 4개 파일·12사이클입니다.
+
+각 Ubuntu에 최신 코드를 반영하고 워크스페이스 루트에서 다시 빌드합니다.
+
+```bash
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install --packages-select sim_real_gap_getting
+source install/setup.bash
+```
+
+아래는 Windows의 `F:\연구\grad`가 각 Ubuntu에서 `/mnt/f/연구/grad`로
+보이는 경우입니다. WSL이 아닌 Ubuntu에서는 실제 드라이브 또는 공유 폴더의
+마운트 경로로 바꿉니다. `/mnt/f`가 마운트되지 않으면 수집하지 않습니다.
+
+```bash
+# Ubuntu 1 — mDPG
+mountpoint /mnt/f && ros2 run sim_real_gap_getting collect_front_batch --tool mdpg_1s1 --repeats 3 --output-dir "/mnt/f/연구/grad/mdpg"
+```
+
+```bash
+# Ubuntu 2 — AG145
+mountpoint /mnt/f && ros2 run sim_real_gap_getting collect_front_batch --tool ag145 --repeats 3 --output-dir "/mnt/f/연구/grad/ag145"
+```
+
+```bash
+# Ubuntu 3 — 그리퍼 없음
+mountpoint /mnt/f && ros2 run sim_real_gap_getting collect_front_batch --tool none --repeats 3 --output-dir "/mnt/f/연구/grad/none"
+```
+
+세 명령의 합계는 원자료 12개 파일·36사이클입니다. 출력 하위의 실행별
+폴더와 모델 폴더를 분리하므로 같은 공유 드라이브에서도 파일이 겹치지 않습니다.
+기본 후방 벽 장면이 설치되지 않은 환경에서는 `--arm-scene`으로 사용할
+MuJoCo XML을 명시해야 하며, 선택한 XML이 검사와 수집에 함께 쓰입니다.
+
 ### 60th 모델 장면 대조
 
 저장소 루트의 `doosan_changes_export.tar.gz`와 `scripts/apply_doosan_changes.sh`는

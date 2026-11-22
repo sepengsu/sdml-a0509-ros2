@@ -38,8 +38,8 @@ def collect_front_sim(trajectory_dir: Path, output_dir: Path, *, tool: str,
     import mujoco
     import numpy as np
 
-    if tool not in ("ag145", "mdpg_1s1"):
-        raise ValueError("tool must be ag145 or mdpg_1s1")
+    if tool not in ("none", "ag145", "mdpg_1s1"):
+        raise ValueError("tool must be none, ag145 or mdpg_1s1")
     if profile not in PROFILE_NAMES:
         raise ValueError(f"profile must be one of {PROFILE_NAMES}")
     if not isinstance(repeats, int) or isinstance(repeats, bool) or not 1 <= repeats <= 100:
@@ -215,7 +215,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Collect compressed MuJoCo-only front data")
     parser.add_argument("--trajectory-dir", type=Path, default=_default_trajectory_dir())
     parser.add_argument("--output-dir", type=Path, default=Path.cwd() / "results/front_sim_data")
-    parser.add_argument("--tool", choices=("ag145", "mdpg_1s1"), required=True)
+    parser.add_argument("--tool", choices=("none", "ag145", "mdpg_1s1"), required=True)
     parser.add_argument("--profile", choices=PROFILE_NAMES, required=True)
     parser.add_argument("--repeats", type=int, default=10)
     args = parser.parse_args(argv)

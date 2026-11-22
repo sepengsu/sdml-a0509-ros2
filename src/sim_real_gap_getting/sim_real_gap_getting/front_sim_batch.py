@@ -21,7 +21,7 @@ from .front_trajectory import PROFILE_NAMES
 
 INPUT_FILES = ("a0509_front_setup_10cm.json",
                *(f"a0509_front_{profile}.json" for profile in PROFILE_NAMES))
-TOOL_CHOICES = ("ag145", "mdpg_1s1", "both")
+TOOL_CHOICES = ("none", "ag145", "mdpg_1s1", "both")
 
 
 def _write_json(path: Path, value: dict) -> None:
@@ -83,9 +83,9 @@ def collect_front_batch(source_dir: Path, output_dir: Path, *,
     try:
         if stop_requested is not None and stop_requested():
             raise RuntimeError("batch stopped by user")
-        emit("audit_start", message="Building both tool scenes and checking all four paths")
+        emit("audit_start", message="Checking selected tool models and all four paths")
         clearance = audit_front_grippers(input_dir, run_dir / "models",
-                                         arm_scene=arm_scene)
+                                         arm_scene=arm_scene, tools=tools)
         audit_file = input_dir / "a0509_front_gripper_clearance.json"
         _write_json(audit_file, clearance)
         if clearance["status"] != "model_preflight_passed_physical_unverified":

@@ -50,7 +50,8 @@ def audit_front_quality(trajectory_dir: Path, clearance_report: Path) -> dict:
         }
     for tool, item in clearance["tools"].items():
         scene = Path(item["scene"])
-        observer = MujocoObserver(scene, tcp_site=("ag145_tcp" if tool == "ag145" else "mdpg_tcp"))
+        tcp_site = {"none": "no_tcp_site_on_bare_arm", "ag145": "ag145_tcp", "mdpg_1s1": "mdpg_tcp"}[tool]
+        observer = MujocoObserver(scene, tcp_site=tcp_site)
         model = observer.model
         dofs = observer.dof_addr
         model_report = {
@@ -69,7 +70,11 @@ def audit_front_quality(trajectory_dir: Path, clearance_report: Path) -> dict:
             damping_peak = np.zeros(6, dtype=float)
             for point in plan.points:
                 observer._set_state(point.q_rad, point.dq_rad_s, point.ddq_rad_s2)
-                observer.mj.mj_fullM(model, observer.data, mass)
+                try:
+                    observer.mj.mj_fullM(model, mass, observer.data.qM)
+                except TypeError:
+                    # Newer MuJoCo Python bindings take MjData instead of qM.
+                    observer.mj.mj_fullM(model, observer.data, mass)
                 acceleration[:] = 0
                 acceleration[dofs] = point.ddq_rad_s2
                 inertia = (mass @ acceleration)[dofs]

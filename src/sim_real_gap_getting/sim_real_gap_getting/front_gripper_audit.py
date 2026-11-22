@@ -54,19 +54,25 @@ def _add_mdpg_collision_envelope(scene: Path) -> None:
 
 
 def _build_scenes(scene_dir: Path, mdpg_mount_xyz_m, mdpg_mount_rpy_rad,
-                  arm_scene: Path | None = None) -> dict[str, Path]:
-    from a0509_dynamics_experiment.ag145_model import build_ag145_scene
-    from mdpg_1s1_description.model import build_mdpg_scene
-
+                  arm_scene: Path | None = None,
+                  tools=("ag145", "mdpg_1s1")) -> dict[str, Path]:
     arm = Path(arm_scene).resolve() if arm_scene is not None else _scene_path()
     scene_dir.mkdir(parents=True, exist_ok=True)
-    ag145 = build_ag145_scene(scene_dir / "ag145_scene.xml", arm_scene=arm)
-    mdpg = build_mdpg_scene(scene_dir / "mdpg_scene.xml",
-                            mount_xyz=mdpg_mount_xyz_m, mount_rpy=mdpg_mount_rpy_rad,
-                            arm_scene=arm,
-                            dynamics_model="box_approx")
-    _add_mdpg_collision_envelope(mdpg)
-    return {"ag145": ag145, "mdpg_1s1": mdpg}
+    scenes = {}
+    if "none" in tools:
+        # Read the original arm scene directly; do not attach a tool or edit its XML.
+        scenes["none"] = arm
+    if "ag145" in tools:
+        from a0509_dynamics_experiment.ag145_model import build_ag145_scene
+        scenes["ag145"] = build_ag145_scene(scene_dir / "ag145_scene.xml", arm_scene=arm)
+    if "mdpg_1s1" in tools:
+        from mdpg_1s1_description.model import build_mdpg_scene
+        mdpg = build_mdpg_scene(scene_dir / "mdpg_scene.xml",
+                                mount_xyz=mdpg_mount_xyz_m, mount_rpy=mdpg_mount_rpy_rad,
+                                arm_scene=arm, dynamics_model="box_approx")
+        _add_mdpg_collision_envelope(mdpg)
+        scenes["mdpg_1s1"] = mdpg
+    return scenes
 
 
 def _tool_geometry_ids(model, prefix: str) -> tuple[list[int], list[int]]:
@@ -127,10 +133,15 @@ def audit_front_grippers(trajectory_dir: Path, scene_dir: Path, *,
                          corridor_y_max_mm: float | None = None,
                          mdpg_mount_xyz_m=(0.0, 0.0, 0.0),
                          mdpg_mount_rpy_rad=(0.0, 0.0, 0.0),
-                         arm_scene: Path | None = None) -> dict:
+                         arm_scene: Path | None = None,
+                         tools=("ag145", "mdpg_1s1")) -> dict:
     from a0509_dynamics_experiment.simulation_executor import MujocoObserver
     from .lr_trajectory import simulate_cycle
 
+    tools = tuple(tools)
+    if not tools or len(set(tools)) != len(tools) or any(
+            tool not in ("none", "ag145", "mdpg_1s1") for tool in tools):
+        raise ValueError("Select unique tools from none, ag145, mdpg_1s1")
     if planning_margin_mm < 0 or not math.isfinite(planning_margin_mm):
         raise ValueError("planning margin must be finite and nonnegative")
     if lower_obstacle_top_z_mm is not None and not math.isfinite(lower_obstacle_top_z_mm):
@@ -144,13 +155,14 @@ def audit_front_grippers(trajectory_dir: Path, scene_dir: Path, *,
     trajectories = {name: load_trajectory(trajectory_dir / f"a0509_front_{name}.json")
                     for name in TRAJECTORIES}
     scenes = _build_scenes(scene_dir, mdpg_mount_xyz_m, mdpg_mount_rpy_rad,
-                           arm_scene=arm_scene)
+                           arm_scene=arm_scene, tools=tools)
     report = {
         "status": "pending_model_preflight",
         "coordinate_frame": "DR_BASE Z; horizontal lower obstacle assumed across entire path",
         "trajectory_dir": str(trajectory_dir.resolve()),
         "arm_scene": str(Path(arm_scene).resolve() if arm_scene is not None else _scene_path()),
-        "model_sources": {"ag145": "DH AG-105-145 CAD + three approximate collision boxes",
+        "model_sources": {"none": "Original bare A0509 scene; no tool attached",
+                          "ag145": "DH AG-105-145 CAD + three approximate collision boxes",
                           "mdpg_1s1": "mDPG CAD + oversize 80x80x100 mm planning box"},
         "robot_extent_method": "Rotated MuJoCo geom bounding boxes for all moving arm and tool geoms",
         "manufacturer_nominal_size_mm": {"ag145": [203.9, 212.3, 67.0],
@@ -167,12 +179,20 @@ def audit_front_grippers(trajectory_dir: Path, scene_dir: Path, *,
         "tools": {},
     }
     for tool, scene in scenes.items():
-        observer = MujocoObserver(scene, tcp_site=("ag145_tcp" if tool == "ag145" else "mdpg_tcp"))
+        tcp_site = {"none": "no_tcp_site_on_bare_arm", "ag145": "ag145_tcp", "mdpg_1s1": "mdpg_tcp"}[tool]
+        observer = MujocoObserver(scene, tcp_site=tcp_site)
         moving_geoms = _moving_robot_geoms(observer.model)
         blocking_contacts = lambda data: _moving_robot_contact_count(data, moving_geoms)
-        collision_ids, visual_ids = _tool_geometry_ids(observer.model, "ag145_" if tool == "ag145" else "mdpg_")
+        if tool == "none":
+            collision_ids = visual_ids = [i for i in moving_geoms
+                                         if observer.model.geom_bodyid[i] == observer.body_id]
+            if not collision_ids:
+                raise ValueError("Bare A0509 link_6 has no geometry")
+        else:
+            collision_ids, visual_ids = _tool_geometry_ids(observer.model, "ag145_" if tool == "ag145" else "mdpg_")
         tool_report = {"scene": str(scene.resolve()), "paths": {},
-                       "collision_model": "approximate", "physical_mount_verified": False,
+                       "collision_model": "original_link_6_geometry" if tool == "none" else "approximate",
+                       "physical_mount_verified": False,
                        "real_robot_executable": False}
         for name, trajectory in trajectories.items():
             box_min = visual_min = float("inf")
