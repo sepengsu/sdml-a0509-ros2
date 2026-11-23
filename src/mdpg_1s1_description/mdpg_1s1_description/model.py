@@ -70,7 +70,8 @@ def _rpy_quat(rpy: tuple[float, float, float]) -> str:
 def build_mdpg_scene(output: str | Path, mount_xyz, mount_rpy,
                      arm_scene: str | Path | None = None,
                      gripper_share: str | Path | None = None,
-                     dynamics_model: str = "visual") -> Path:
+                     dynamics_model: str = "visual",
+                     include_visuals: bool = True) -> Path:
     """Generate an MJCF with visual-only or explicit box-approximate inertia.
 
     The caller supplies the flange transform. The optional box inertia assumes
@@ -128,7 +129,7 @@ def build_mdpg_scene(output: str | Path, mount_xyz, mount_rpy,
     cad = ET.SubElement(tool, "frame", name="mdpg_cad_frame", quat=CAD_TO_MOUNT_QUAT)
     ET.SubElement(cad, "site", name="mdpg_tcp", pos=f"0 0 {CAD_NOMINAL_TCP_Z_M}",
                   size="0.004", rgba="0.1 0.5 1 1")
-    for part, color in PARTS.items():
+    for part, color in (PARTS.items() if include_visuals else ()):
         mesh_file = gripper_share / "meshes" / f"{part}.stl"
         if not mesh_file.is_file():
             raise FileNotFoundError(mesh_file)

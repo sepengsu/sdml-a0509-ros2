@@ -121,7 +121,8 @@ def _compatible_stl(path: Path, output_dir: Path, target_faces: int = 8_000) -> 
 
 def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
                       gripper_urdf: str | Path | None = None,
-                      grasp_angle_rad: float | None = None) -> Path:
+                      grasp_angle_rad: float | None = None,
+                      include_visuals: bool = True) -> Path:
     """Write a self-contained XML that references installed mesh assets."""
     if grasp_angle_rad is not None and (not math.isfinite(grasp_angle_rad)
                                         or not 0 < grasp_angle_rad <= 0.93):
@@ -244,7 +245,8 @@ def build_ag145_scene(output: str | Path, arm_scene: str | Path | None = None,
                                  quat=quat)
             add_link(child_name, body)
 
-    add_link("base_link", mount)
+    if include_visuals:
+        add_link("base_link", mount)
     output.parent.mkdir(parents=True, exist_ok=True)
     ET.indent(scene)
     ET.ElementTree(scene).write(output, encoding="utf-8", xml_declaration=True)

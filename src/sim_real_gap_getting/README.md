@@ -4,6 +4,12 @@ A0509의 JSON 관절 경로를 MuJoCo에서 연습하고, 별도 ROS domain에�
 
 ## 빌드와 실행
 
+T1–T16에 15개 마찰 시나리오를 적용하는 별도 v3 실행기는
+`ros2 run sim_real_gap_getting validate_friction`입니다.
+모델 분석 → Offline → 실제 Dynamic pilot → 전체 수집 순서로 실행하며,
+기존 F1–F4 수집과 결과를 분리합니다.
+[감쇠 분석·계수·Ubuntu 실행 안내](../../docs/FRICTION_ROS2_V3.md)를 참고하세요.
+
 ROS 2 Humble, MuJoCo, `a0509_mujoco_sim`을 준비한 워크스페이스에서:
 
 ```bash
