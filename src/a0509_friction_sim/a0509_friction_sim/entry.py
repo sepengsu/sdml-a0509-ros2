@@ -1,4 +1,4 @@
-"""ROS2 console entry point; simulation only, with no robot or ROS topic IO."""
+"""Pure MuJoCo entry point; no ROS node, topics or hardware IO."""
 import os
 
 

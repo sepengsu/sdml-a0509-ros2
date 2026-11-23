@@ -1,6 +1,6 @@
 {
-  "schema_version": 3,
-  "name": "a0509_friction_engine_ros2_v3",
+  "schema_version": 4,
+  "name": "a0509_mujoco_friction_sim_v4",
   "background_damping_policy": "preserve_original",
   "background_damping_nm_s_rad": [800, 800, 800, 600, 600, 600],
   "effort_limits_nm": [194, 194, 163, 50, 50, 50],

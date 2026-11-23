@@ -9,11 +9,11 @@ import mujoco as mj
 import numpy as np
 
 ROOT=Path(__file__).resolve().parents[3]
-for name in ("sim_real_gap_getting","a0509_dynamics_experiment","mdpg_1s1_description"):
+for name in ("a0509_friction_sim","a0509_dynamics_experiment","mdpg_1s1_description"):
     sys.path.insert(0,str(ROOT/"src"/name))
-from sim_real_gap_getting.friction_engine.common import PACKAGE,build_baseline,load_config,original_functions
-from sim_real_gap_getting.friction_engine.laws import FrictionState,configure_model,decompose,inverse_at,parameters,resistance,scenarios
-from sim_real_gap_getting.friction_engine import dynamic,models,runtime
+from a0509_friction_sim.common import PACKAGE,build_baseline,load_config,original_functions
+from a0509_friction_sim.laws import FrictionState,configure_model,decompose,inverse_at,parameters,resistance,scenarios
+from a0509_friction_sim import dynamic,models,runtime
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
@@ -64,7 +64,7 @@ class FrictionEngineTests(unittest.TestCase):
         self.assertIsNone(root.find(".//mesh"))
 
     def test_tool_selector_limits_plan_to_256_rollouts(self):
-        from sim_real_gap_getting.friction_engine import cli
+        from a0509_friction_sim import cli
         from contextlib import redirect_stdout
         from io import StringIO
         for tool in ("none","ag145","mdpg_1s1"):
@@ -73,6 +73,17 @@ class FrictionEngineTests(unittest.TestCase):
                                  "--output",str(self.root/"new"),"--tool",tool])
             self.assertEqual(result,0)
             self.assertIn("selected scope 256",captured.getvalue())
+
+    def test_pure_simulation_does_not_import_real_or_ros_runtime(self):
+        import os
+        import subprocess
+        env=os.environ.copy()
+        env["PYTHONPATH"]=os.pathsep.join(p for p in sys.path if p)
+        code=("import a0509_friction_sim.cli,sys; "
+              "assert not any(n=='sim_real_gap_getting' or n.startswith('sim_real_gap_getting.') "
+              "or n=='rclpy' or n.startswith('rclpy.') or n=='dsr_msgs2' for n in sys.modules)")
+        result=subprocess.run([sys.executable,"-c",code],capture_output=True,text=True,env=env)
+        self.assertEqual(result.returncode,0,result.stderr)
 
     def test_viscous_native_damping_is_added_once(self):
         configure_model(self.model,self.baseline,self.config)

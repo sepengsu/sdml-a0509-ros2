@@ -1,13 +1,12 @@
 from glob import glob
-from setuptools import find_packages, setup
+from setuptools import setup
 
 package_name = "sim_real_gap_getting"
 
 setup(
     name=package_name,
     version="0.1.0",
-    packages=find_packages(include=[package_name, package_name + ".*"]),
-    package_data={package_name + ".friction_engine": ["config.json", "requirements.txt"]},
+    packages=[package_name],
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml", "README.md"]),
@@ -33,7 +32,6 @@ setup(
         "audit_front_excitation = sim_real_gap_getting.front_quality_audit:main",
         "collect_front_sim = sim_real_gap_getting.front_sim_collect:main",
         "collect_front_batch = sim_real_gap_getting.front_sim_batch:main",
-        "validate_friction = sim_real_gap_getting.friction_engine.entry:main",
         "front_batch_gui = sim_real_gap_getting.front_batch_gui:main",
         "build_front_60th_scene = sim_real_gap_getting.front_60th_scene:main",
         "review_front_real = sim_real_gap_getting.front_real_review:main",

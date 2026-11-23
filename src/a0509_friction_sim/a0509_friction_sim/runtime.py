@@ -81,7 +81,7 @@ def kill_worker(process):
 
 
 def run_worker(arguments, index, log_path, timeout_s=900):
-    command = [sys.executable, "-u", "-m", "sim_real_gap_getting.friction_engine", *arguments, "--worker", str(index)]
+    command = [sys.executable, "-u", "-m", "a0509_friction_sim", *arguments, "--worker", str(index)]
     started, peak = time.monotonic(), 0
     with log_path.open("w", encoding="utf-8") as log:
         env = os.environ.copy()

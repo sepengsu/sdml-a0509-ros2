@@ -23,10 +23,10 @@ def digest(value):
 
 def load_config(path):
     config = json.loads(Path(path).read_text(encoding="utf-8"))
-    if config["schema_version"] != 3 or config["background_damping_policy"] != "preserve_original":
-        raise ValueError("Only the preserved-background-damping v3 profile is supported")
+    if config["schema_version"] != 4 or config["background_damping_policy"] != "preserve_original":
+        raise ValueError("Only the preserved-background-damping v4 simulation profile is supported")
     if mj.__version__ != "3.2.7" or np.__version__ != "1.26.4":
-        raise ValueError("Validated runtime requires mujoco==3.2.7 and numpy==1.26.4; install friction_engine/requirements.txt")
+        raise ValueError("Validated runtime requires mujoco==3.2.7 and numpy==1.26.4; install a0509_friction_sim/requirements.txt")
     if digest(config["legacy"]) != config["original_config_sha256"]:
         raise ValueError("Legacy coefficients/formulas changed; create and validate another profile")
     if sha256(PACKAGE / "reference_original.py") != config["original_generator_sha256"]:
@@ -108,8 +108,8 @@ def save_npz(path, arrays):
 
 
 def identity(config, source):
-    files = {f"friction_engine/{p.name}": p for p in PACKAGE.glob("*.py")}
-    files["friction_engine/requirements.txt"] = PACKAGE / "requirements.txt"
+    files = {f"a0509_friction_sim/{p.name}": p for p in PACKAGE.glob("*.py")}
+    files["a0509_friction_sim/requirements.txt"] = PACKAGE / "requirements.txt"
     files.update(asset_files())
     record = {"config": config, "source_manifest_sha256": sha256(source/"manifest.json"),
               "assets": {name: sha256(p) for name, p in files.items()},

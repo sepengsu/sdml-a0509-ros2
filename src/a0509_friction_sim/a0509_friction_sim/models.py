@@ -1,4 +1,4 @@
-"""Original A0509 assets and T1-T16 geometry, resolved from ROS2 or source."""
+"""Original A0509 assets and mathematical T1-T16 geometry for pure simulation."""
 import importlib
 import inspect
 import math
@@ -50,9 +50,14 @@ def asset_files():
                 result[f"{name}/{path.relative_to(share).as_posix()}"] = path
     result["a0509_dynamics_experiment/config/payload_conditions.json"] = (
         package_share("a0509_dynamics_experiment") / "config/payload_conditions.json")
-    for name in ("a0509_dynamics_experiment", "mdpg_1s1_description"):
+    code_files={
+        "a0509_dynamics_experiment": ("__init__.py","wide16_trajectory.py","trajectory_generator.py",
+                                      "ag145_model.py","payload_model.py","dynamics10_safety.py"),
+        "mdpg_1s1_description": ("__init__.py","model.py"),
+    }
+    for name, filenames in code_files.items():
         directory = Path(importlib.import_module(name).__file__).parent
-        result.update({f"{name}/{p.name}": p for p in directory.glob("*.py")})
+        result.update({f"{name}/{filename}": directory/filename for filename in filenames})
     return result
 
 

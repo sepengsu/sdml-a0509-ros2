@@ -1,6 +1,6 @@
-# A0509 15개 마찰 조건 — ROS2 v3
+# A0509 15개 마찰 조건 — 독립 MuJoCo 시뮬레이션 v4
 
-ROS2 명령은 `ros2 run sim_real_gap_getting validate_friction`이다. 기존 Windows v2의 수식·검증 단계를 ROS2 Python 패키지에 독립적으로 포함했다. `scripts/`의 미설치 모듈이나 Windows API에 의존하지 않는다. 기존 모델, H:의 원본 데이터, 기존 v2 결과, F1–F4 수집 명령은 변경하지 않는다. 새 출력 폴더에만 저장한다.
+독립 패키지 `a0509_friction_sim`이 MuJoCo 물리 엔진만 실행한다. 기본 실행기는 `scripts/run_friction_simulation.ps1`이며 ROS2, Docker, 실로봇 연결이 필요하지 않다. 잘못 넣었던 sim-to-real 패키지의 마찰 연결은 제거했다. 기존 모델, H:의 원본 데이터, 기존 결과는 보존하고 `friction_sim_v4`라는 새 출력에만 저장한다.
 
 ## 모델 분석과 구현 순서
 
@@ -31,14 +31,14 @@ J4–J6은 감쇠 보상만으로 약 4.775 deg/s에서 모델의 50 Nm 제한�
 
 입력 manifest는 `H:/a0509-data/training_datasets_2026-11-22/data/friction_diverse_v1/manifest.json`이다. 7조건×16궤적×3변형 =336청크, 1,317,456상태다. 기존 15개는 동일한 상태에 붙인 추가 마찰 토크 정답이다.
 
-원본 `pkan-robot-modeling/src/model/collect_friction.py`를 확보했고, `friction_engine/reference_original.py`에 원문을 보관했다. 복원 검사는 이 파일에서 필요한 4개 함수만 AST로 추출하며 원본 전체 모듈의 실행 진입점은 호출하지 않는다. 원문 SHA-256은 `ba62c3b72c1efbc6a3b3450e83eb6f88bbc641ec11475ff00d6640ec8878ae61`, 정렬·축약 JSON config SHA-256은 `22c19b09b4d1c490eb979a3e6fa8177aa0ff62e91ad89edcc144216ccffd6aad`다. Git에는 원문 바이트를 보존하도록 지정했다.
+원본 `pkan-robot-modeling/src/model/collect_friction.py`를 확보했고, `a0509_friction_sim/reference_original.py`에 원문을 보관했다. 복원 검사는 이 파일에서 필요한 4개 함수만 AST로 추출하며 원본 전체 모듈의 실행 진입점은 호출하지 않는다. 원문 SHA-256은 `ba62c3b72c1efbc6a3b3450e83eb6f88bbc641ec11475ff00d6640ec8878ae61`, 정렬·축약 JSON config SHA-256은 `22c19b09b4d1c490eb979a3e6fa8177aa0ff62e91ad89edcc144216ccffd6aad`다. Git에는 원문 바이트를 보존하도록 지정했다.
 
 |계수|J1|J2|J3|J4|J5|J6|
 |---|---:|---:|---:|---:|---:|---:|
 |Fc (Nm)|0.4|0.35|0.25|0.15|0.12|0.08|
 |B (Nm·s/rad)|1|0.875|0.625|0.375|0.3|0.2|
 
-Coulomb, Viscous, Stribeck, Asymmetric, LuGre형의 각 계수는 low=0.5, nominal=1, high=1.5를 Fc와 B에 곱한다. 원본 검증 프로필은 이 값과 수식을 해시로 고정한다. 설정은 패키지의 `friction_engine/config.json`이며, 출력 `friction_parameters.json`에 축별 실제 계수를 모두 펼쳐 기록한다.
+Coulomb, Viscous, Stribeck, Asymmetric, LuGre형의 각 계수는 low=0.5, nominal=1, high=1.5를 Fc와 B에 곱한다. 원본 검증 프로필은 이 값과 수식을 해시로 고정한다. 설정은 패키지의 `a0509_friction_sim/config.json`이며, 출력 `friction_parameters.json`에 축별 실제 계수를 모두 펼쳐 기록한다.
 
 v는 관절 속도, s는 강도다. F는 추가 모터 보상 토크이고 실제 마찰력은 −F다.
 
@@ -68,7 +68,7 @@ required_motor_inverse = qfrc_inverse − external
 
 native `frictionloss`는 건마찰 constraint이고 `qfrc_passive`의 damping과 다르다. raw inverse는 순수 RBD가 아니다. nonlinear external 마찰의 음수를 raw inverse에서 한 번 빼 모터 요구 토크를 구한다. 원본 감쇠와 시나리오 마찰을 별도 채널로 저장한다. LuGre 상태는 forward/inverse 호출 횟수와 무관하게 물리 시각마다 한 번만 갱신한다.
 
-Offline은 청크당 32상태, 총 10,752상태×15조건을 같은 q/dq/ddq에서 비교한다. 설정 `offline.samples_per_chunk=0`은 전체 상태 검사이며 별도 config/출력 버전을 사용해야 한다. 원본 전체 336청크의 궤적·이력 재현은 표본 검사 전에 수행한다. 기존 v2 및 v3 검증에서 원본 정답 대비 최대 차이는 약 2.98e-8 Nm, 마찰항 중복·부호 잔차는 약 3.42e-14 Nm였다.
+Offline은 청크당 32상태, 총 10,752상태×15조건을 같은 q/dq/ddq에서 비교한다. 설정 `offline.samples_per_chunk=0`은 전체 상태 검사이며 별도 config/출력 버전을 사용해야 한다. 원본 전체 336청크의 궤적·이력 재현은 표본 검사 전에 수행한다. 원본 비교 검증에서 원본 정답 대비 최대 차이는 약 2.98e-8 Nm, 마찰항 중복·부호 잔차는 약 3.42e-14 Nm였다.
 
 Dynamic은 nominal T1–T16을 재사용한다. seed 변형 3회는 Offline에서 복원한다. 신규 Dynamic의 같은 결정론적 실행을 3회 복제하지 않는다. 한 도구·무하중 조건당 16궤적×(baseline+15조건)=256회다. 3종 무하중만 수집하면 768회, 기존 7개 도구·하중 조건 전체는 1,792회다.
 
@@ -76,48 +76,50 @@ Dynamic은 nominal T1–T16을 재사용한다. seed 변형 3회는 Offline에�
 
 품질 기준은 최대 추종 오차 0.05 rad, 축별 저장 sample RMSE 0.02 rad, 전체 500 Hz 제어 step의 제한 전 명령 포화 비율 0이다. 포화나 추종 실패가 있어도 정상 적분을 마치면 진단 데이터와 `quality_pass=false`를 저장하고 실패 코드로 종료한다. 실제 qacc는 그대로 기록하고 원본 planning 가속도 가이드라인 초과 여부를 별도 표시한다. 실제 위치·속도 제한, 비정상 값, 접촉, 수치 경고는 실행을 중단한다.
 
-## Ubuntu 설치와 실행
+## Windows PowerShell 실행
 
-각 Ubuntu의 ROS2 워크스페이스 루트에서 최신 소스를 준비한다. 아래는 기존 ROS2 의존 패키지를 빌드해 둔 환경이다. Python 환경은 ROS2 Humble의 `/usr/bin/python3`와 같은 Python 버전을 사용한다.
-
-```bash
-source /opt/ros/humble/setup.bash
-source install/setup.bash
-sudo apt-get update && sudo apt-get install -y python3-venv python3-pip
-/usr/bin/python3 -m venv --system-site-packages .venv-friction-ros2
-source .venv-friction-ros2/bin/activate
-python3 -m pip install -r src/sim_real_gap_getting/sim_real_gap_getting/friction_engine/requirements.txt
-# colcon을 venv의 Python으로 실행해 새 console script도 이 환경을 사용하게 합니다.
-python3 "$(command -v colcon)" build --symlink-install --packages-select sim_real_gap_getting
-source install/setup.bash
-```
-
-F:와 H:가 `/mnt/f`, `/mnt/h`로 보이는 환경의 예다. 일반 Ubuntu에서는 실제 드라이브/공유 폴더 마운트 경로로 바꾼다. 입력 원본을 F:로 복사한 경우에도 `--source`, `--legacy-speed-root`를 그 경로로 명시한다.
-
-```bash
-SOURCE="/mnt/h/a0509-data/training_datasets_2026-11-22/data/friction_diverse_v1"
-SPEED="/mnt/h/a0509-data/wide16_speed_sim_v1"
-OUT="/mnt/f/연구/grad/friction_engine_ros2_v3/none"
-friction_v3() {
-  ros2 run sim_real_gap_getting validate_friction --source "$SOURCE" --legacy-speed-root "$SPEED" --output "$OUT" "$@"
-}
-mountpoint /mnt/f && mountpoint /mnt/h &&
-friction_v3 --mode analyze &&
-friction_v3 --mode offline &&
-friction_v3 --mode pilot &&
-friction_v3 --mode collect --tool none --max-jobs 16 &&
-friction_v3 --mode status --tool none
-```
-
-`--max-jobs 16`은 해당 도구의 T1 baseline+15조건을 선택한다. 같은 명령을 반복하면 완료 파일을 체크섬 검증 후 건너뛴다. 전체 T1–T16 수집은 MaxJobs를 제거한다. `--tool`은 무하중 1조건 필터다. 하중이 필요하면 `--tool` 대신 `--conditions ag145_p05 ag145_p10` 등으로 선택한다. Analyze/Offline/Pilot은 `--tool` 없이 전체 검증을 먼저 수행한다. 기본 pilot은 bare_p0/T15의 첫 30초×16조건이며 모든 도구·궤적 조합 검증을 대신하지 않는다.
-
-세 Ubuntu에서 분리해 수집할 때는 각 머신에서 위 검증 단계를 수행한 뒤 `OUT`을 각각 `.../none`, `.../ag145`, `.../mdpg`로 선택하고 collect의 `--tool`을 각각 `none`, `ag145`, `mdpg_1s1`로 바꾼다. 출력 루트를 공유하지 않는다.
-
-Windows에서는 같은 v3 구현을 다음처럼 호출한다. H:의 기존 데이터 경로를 유지하면서 새 출력 경로만 지정한다.
+저장소 루트에서 실행한다. 입력 데이터는 H:에서 읽고, 새 시뮬레이션 결과만 F:에 저장한다.
 
 ```powershell
-.\.venv-friction\Scripts\python.exe .\scripts\friction_engine_validation.py --mode plan --tool none --source 'H:\a0509-data\training_datasets_2026-11-22\data\friction_diverse_v1' --legacy-speed-root 'H:\a0509-data\wide16_speed_sim_v1' --output 'F:\연구\grad\friction_engine_ros2_v3\none'
+Set-Location 'C:\Users\na062\Desktop\graduate\sdml-a0509-ros2'
+$ErrorActionPreference = 'Stop'
+.\scripts\run_friction_simulation.ps1 -Mode setup
+.\scripts\run_friction_simulation.ps1 -Mode analyze -DataRoot 'F:\연구\grad'
+.\scripts\run_friction_simulation.ps1 -Mode offline -DataRoot 'F:\연구\grad'
+.\scripts\run_friction_simulation.ps1 -Mode pilot -DataRoot 'F:\연구\grad'
+.\scripts\run_friction_simulation.ps1 -Mode collect -DataRoot 'F:\연구\grad' -Tool none -MaxJobs 16
+.\scripts\run_friction_simulation.ps1 -Mode status -DataRoot 'F:\연구\grad' -Tool none
 ```
+
+환경은 `.venv-friction-sim`이다. Python 3.10–3.12와 고정 버전 라이브러리를 사용한다. 환경 검사에 `python -c`를 사용하지 않는다. 기본 결과는 `F:\연구\grad\friction_sim_v4`다. 입력 위치를 바꾸려면 `-SourceRoot`, `-LegacySpeedRoot`를 별도로 지정한다. 검증 결과를 보존하면서 다른 실험을 시작하려면 `-ResultsName`과 JSON config를 바꾼다.
+
+`-MaxJobs 16`은 선택한 도구의 T1 baseline+15조건을 실행한다. 같은 명령을 반복하면 완료 파일을 체크섬 검증 후 재사용한다. 해당 도구의 전체 T1–T16을 수집하려면 MaxJobs를 제거한다. `-Tool none|ag145|mdpg_1s1`은 무하중 1조건을 선택한다. 하중은 `-Tool` 대신 `-Conditions ag145_p05,ag145_p10` 등으로 선택한다. Analyze/Offline/Pilot은 Tool 필터 없이 전체 검증을 먼저 수행한다. 기본 pilot은 bare_p0/T15 첫 30초×16조건이며 모든 도구·궤적 검증을 대신하지 않는다.
+
+## Ubuntu에서도 ROS2 없이 실행
+
+저장소 루트에서 Python 가상환경만 준비한다. 시뮬레이터는 수학적 궤적과 모델 자산만 사용하고 ROS 노드·토픽·실로봇 드라이버를 불러오지 않는다.
+
+```bash
+python3 -m venv .venv-friction-sim
+source .venv-friction-sim/bin/activate
+python3 -m pip install -r src/a0509_friction_sim/a0509_friction_sim/requirements.txt
+SOURCE="/mnt/h/a0509-data/training_datasets_2026-11-22/data/friction_diverse_v1"
+SPEED="/mnt/h/a0509-data/wide16_speed_sim_v1"
+OUT="/mnt/f/연구/grad/friction_sim_v4/none"
+friction_sim() {
+  python3 scripts/collect_friction_simulation.py --source "$SOURCE" --legacy-speed-root "$SPEED" --output "$OUT" "$@"
+}
+mountpoint /mnt/f && mountpoint /mnt/h &&
+friction_sim --mode analyze &&
+friction_sim --mode offline &&
+friction_sim --mode pilot &&
+friction_sim --mode collect --tool none --max-jobs 16 &&
+friction_sim --mode status --tool none
+```
+
+F:와 H:가 각각 `/mnt/f`, `/mnt/h`로 보이는 경우의 예다. 일반 Ubuntu에서는 실제 마운트 경로로 바꾼다. 세 Ubuntu로 분리할 때는 각 머신의 OUT을 `.../none`, `.../ag145`, `.../mdpg`로 나누고 collect의 tool을 각각 `none`, `ag145`, `mdpg_1s1`로 지정한다. 입력은 읽기 전용으로 공유하고 출력 루트는 공유하지 않는다.
+
+이미 ROS2 워크스페이스를 사용하는 경우에도 이 패키지는 독립적으로 빌드한다. 필요하면 `ros2 run a0509_friction_sim collect_friction --help`로 같은 MuJoCo 실행기를 호출할 수 있다. 기본 수집에는 이 빌드나 ROS2가 필요하지 않다.
 
 ## 결과와 실행 보호
 
@@ -131,4 +133,4 @@ NPZ/CSV에는 실제 q/dq/ddq, 목표 q, 실제 actuator torque, 순수 RBD, raw
 
 전체 summary의 `training_ready=true`는 전체 1,792회가 모두 품질을 통과한 경우에만 설정된다. `--tool`로 선택한 부분 캠페인의 현황은 `--mode status --tool ...`에서 별도 개수로 확인한다. 전체 T1–T16·모든 조건 완료를 pilot 통과만으로 판단하지 않는다.
 
-전체 캠페인은 CSV+NPZ 기준 약 130 GB 규모가 될 수 있다. 10 GiB는 worker 시작을 위한 여유 공간 하한이며 전체 캠페인 용량이 아니다. 최초 검증의 실제 완료 범위와 수치는 [실행 기록](FRICTION_ROS2_V3_VALIDATION.md)에 남겼다.
+전체 캠페인은 CSV+NPZ 기준 약 130 GB 규모가 될 수 있다. 10 GiB는 worker 시작을 위한 여유 공간 하한이며 전체 캠페인 용량이 아니다. 최초 검증의 실제 완료 범위와 수치는 [실행 기록](FRICTION_SIMULATION_V4_VALIDATION.md)에 남겼다.

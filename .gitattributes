@@ -1,2 +1,2 @@
 # Preserve the exact original generator bytes used by the reproduction gate.
-src/sim_real_gap_getting/sim_real_gap_getting/friction_engine/reference_original.py -text whitespace=cr-at-eol
+src/a0509_friction_sim/a0509_friction_sim/reference_original.py -text whitespace=cr-at-eol

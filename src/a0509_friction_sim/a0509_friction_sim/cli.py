@@ -15,7 +15,7 @@ def require_report(path, run_identity, flag):
 
 
 def main(argv=None):
-    p=argparse.ArgumentParser(description="A0509 ROS2 v3: versioned T1-T16 validation with 15 engine-applied friction scenarios")
+    p=argparse.ArgumentParser(description="A0509 MuJoCo simulation v4: T1-T16 with 15 engine-applied friction scenarios")
     p.add_argument("--mode",choices=("plan","analyze","offline","pilot","collect","report","status"),default="plan")
     p.add_argument("--config",type=Path,default=PACKAGE/"config.json")
     p.add_argument("--source",type=Path,required=True)
@@ -42,7 +42,7 @@ def main(argv=None):
         p.error("New output must be separate from both original datasets")
     if a.max_jobs is not None and a.max_jobs<1: p.error("MaxJobs must be positive")
     run_identity,signature=identity(config,source)
-    print(f"Friction engine ROS2 v3 | {a.mode} | {len(scenarios(config,False))} scenarios + baseline | {output}",flush=True)
+    print(f"MuJoCo friction simulation v4 | {a.mode} | {len(scenarios(config,False))} scenarios + baseline | {output}",flush=True)
     from . import dynamic,offline
     canonical=dynamic.jobs(config,"pilot" if a.mode=="pilot" else "dynamic")
     if a.mode=="plan":
