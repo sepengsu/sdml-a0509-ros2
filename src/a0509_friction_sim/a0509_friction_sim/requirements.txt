@@ -1,4 +1,0 @@
-numpy==1.26.4
-mujoco==3.2.7
-psutil==7.0.0
-matplotlib==3.9.4

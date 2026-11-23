@@ -8,9 +8,5 @@ __pycache__/
 results/
 data/
 .venv/
-.venv-data/
-.venv-friction/
-.venv-friction-ros2/
-.venv-friction-sim/
 *.egg-info/
 output/
