@@ -4,7 +4,7 @@
   <!-- Raw CAD has its red mounting face at Z=0 and suction lip at Z=-0.090 m. -->
   <!-- Rotate CAD 180 deg about X inside the tool so red face meets link_6 and suction points outward (+Z). -->
   <!-- Parent mount origin remains TODO for the real adapter; this rotation does not supply it. -->
-  <xacro:macro name="mdpg_1s1_gripper" params="prefix parent *origin tcp_z:=0.090 dynamics_model:=visual">
+  <xacro:macro name="mdpg_1s1_gripper" params="prefix parent *origin tcp_z:=0.090 dynamics_model:=visual publish_tcp:=true">
     <link name="${prefix}base_link">
       <!-- Opt-in uniform-box estimate from the supplied 0.62 kg, 65x70x81 mm specification. -->
       <!-- CoM/inertia are NOT measured; do not use for real payload configuration. -->
@@ -62,11 +62,13 @@
       <child link="${prefix}base_link"/>
       <xacro:insert_block name="origin"/>
     </joint>
-    <link name="${prefix}tcp"/>
-    <joint name="${prefix}tcp_joint" type="fixed">
-      <parent link="${prefix}base_link"/>
-      <child link="${prefix}tcp"/>
-      <origin xyz="0 0 ${tcp_z}" rpy="3.141592653589793 0 0"/>
-    </joint>
+    <xacro:if value="${publish_tcp}">
+      <link name="${prefix}tcp"/>
+      <joint name="${prefix}tcp_joint" type="fixed">
+        <parent link="${prefix}base_link"/>
+        <child link="${prefix}tcp"/>
+        <origin xyz="0 0 ${tcp_z}" rpy="3.141592653589793 0 0"/>
+      </joint>
+    </xacro:if>
   </xacro:macro>
 </robot>

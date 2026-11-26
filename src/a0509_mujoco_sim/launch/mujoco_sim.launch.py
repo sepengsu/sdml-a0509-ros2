@@ -23,11 +23,22 @@ def _select_scene(context):
     mount_xyz = LaunchConfiguration('mdpg_mount_xyz').perform(context)
     mount_rpy = LaunchConfiguration('mdpg_mount_rpy').perform(context)
     dynamics_model = LaunchConfiguration('mdpg_dynamics_model').perform(context)
+    changer_type = LaunchConfiguration('tool_changer_type').perform(context)
+    changer_mode = LaunchConfiguration('tool_changer_dynamics_model').perform(context)
+    rack_option = LaunchConfiguration('tool_rack_enabled').perform(context)
+    config = LaunchConfiguration('tcc1_config').perform(context)
+    if (changer_type not in ('none', 'tcc1') or changer_mode not in ('visual', 'dynamics')
+            or rack_option not in ('true', 'false')):
+        raise RuntimeError('Invalid TCC1 type, dynamics model or rack option')
+    changer, rack = changer_type == 'tcc1', rack_option == 'true'
+    if changer or rack:
+        from tcc1_tool_changer_description.model import load_configuration, write_scene
+        load_configuration(config, gripper, changer_mode, changer=changer, rack=rack)
     if dynamics_model not in ('visual', 'box_approx'):
         raise RuntimeError(f'Unsupported mdpg_dynamics_model: {dynamics_model}')
     if gripper != 'mdpg_1s1' and dynamics_model != 'visual':
         raise RuntimeError('mdpg_dynamics_model requires gripper_type:=mdpg_1s1')
-    if gripper == 'mdpg_1s1' and ('TODO' in mount_xyz or 'TODO' in mount_rpy):
+    if gripper == 'mdpg_1s1' and not changer and ('TODO' in mount_xyz or 'TODO' in mount_rpy):
         raise RuntimeError('mDPG mounting transform is TODO; pass measured mdpg_mount_xyz and mdpg_mount_rpy')
     if requested != 'auto':
         root = ET.parse(requested).getroot()
@@ -41,19 +52,31 @@ def _select_scene(context):
             has_inertia = root.find(".//body[@name='mdpg_base_link']/inertial") is not None
             if has_inertia != (dynamics_model == 'box_approx'):
                 raise RuntimeError('mDPG scene inertia differs from mdpg_dynamics_model')
+        for name, expected in (('master', changer), ('tool', changer and gripper != 'none'), ('rack', rack)):
+            body = root.find(f".//body[@name='tcc1_{name}']")
+            if (body is not None) != expected:
+                raise RuntimeError(f'Explicit MuJoCo scene has a different TCC1 {name} selection')
+            dynamics = name != 'rack' and changer_mode == 'dynamics'
+            if body is not None and (body.find('inertial') is not None) != dynamics:
+                raise RuntimeError(f'Explicit MuJoCo scene has a different TCC1 {name} dynamics model')
         return [SetLaunchConfiguration('resolved_mujoco_model_path', requested)]
+    folder = Path(tempfile.mkdtemp(prefix='a0509_tool_scene_')) if gripper != 'none' or changer or rack else None
     if gripper == 'none':
         from ament_index_python.packages import get_package_share_directory
         scene = Path(get_package_share_directory('dsr_description2')) / 'mujoco_models/a0509/scene.xml'
     else:
-        folder = Path(tempfile.mkdtemp(prefix='a0509_tool_scene_'))
         scene = folder / 'scene.xml'
         if gripper == 'ag145':
             from a0509_dynamics_experiment.ag145_model import build_ag145_scene
             build_ag145_scene(scene)
         else:
             from mdpg_1s1_description.model import build_mdpg_scene
-            build_mdpg_scene(scene, mount_xyz, mount_rpy, dynamics_model=dynamics_model)
+            # The TCC1 configuration replaces the placeholder pose on reparenting.
+            build_mdpg_scene(scene, '0 0 0' if changer else mount_xyz,
+                             '0 0 0' if changer else mount_rpy, dynamics_model=dynamics_model)
+    if changer or rack:
+        scene = write_scene(scene, folder / 'tcc1_scene.xml', gripper, tool_changer_type=changer_type,
+                            mode=changer_mode, rack=rack, config_path=config)
     return [SetLaunchConfiguration('resolved_mujoco_model_path', str(scene))]
 
 ARGUMENTS = [
@@ -65,6 +88,11 @@ ARGUMENTS = [
     DeclareLaunchArgument('mdpg_mount_xyz', default_value='TODO_MEASURE', description='Measured link_6 to mDPG xyz in metres'),
     DeclareLaunchArgument('mdpg_mount_rpy', default_value='TODO_MEASURE', description='Measured link_6 to mDPG rpy in radians'),
     DeclareLaunchArgument('mdpg_dynamics_model', default_value='visual', description='visual | box_approx (simulation estimate)'),
+    DeclareLaunchArgument('tool_changer_type', default_value='none', description='none | tcc1'),
+    DeclareLaunchArgument('tool_changer_dynamics_model', default_value='visual', description='visual | dynamics'),
+    DeclareLaunchArgument('tool_rack_enabled', default_value='false', description='true | false'),
+    DeclareLaunchArgument('tcc1_config', default_value=PathJoinSubstitution(
+        [FindPackageShare('tcc1_tool_changer_description'), 'config', 'tcc1_parameters.yaml'])),
     DeclareLaunchArgument('mujoco_model_path', default_value='auto', description='Optional explicit MuJoCo scene XML'),
 ]
 
@@ -93,6 +121,10 @@ def generate_launch_description():
             " mdpg_mount_xyz:='", LaunchConfiguration('mdpg_mount_xyz'), "'",
             " mdpg_mount_rpy:='", LaunchConfiguration('mdpg_mount_rpy'), "'",
             ' mdpg_dynamics_model:=', LaunchConfiguration('mdpg_dynamics_model'),
+            ' tool_changer_type:=', LaunchConfiguration('tool_changer_type'),
+            ' tool_changer_dynamics_model:=', LaunchConfiguration('tool_changer_dynamics_model'),
+            ' tool_rack_enabled:=', LaunchConfiguration('tool_rack_enabled'),
+            " tcc1_config:='", LaunchConfiguration('tcc1_config'), "'",
         ]
     )
     robot_description = {'robot_description': robot_description_content}

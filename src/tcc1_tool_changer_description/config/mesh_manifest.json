@@ -1,0 +1,162 @@
+{
+  "mesh_units": "mm",
+  "URDF_MJCF_scale": [
+    0.001,
+    0.001,
+    0.001
+  ],
+  "frame": "Original imported STEP assembly frame; NOT a calibrated mounting frame. Do not directly attach to link_6.",
+  "mass_properties": "Geometric uniform-volume statistics only; actual mass and inertia not measured. CAD bodies can overlap and materials are unverified.",
+  "models": {
+    "tcc1_master": {
+      "source_file": "TCC1_MASTER_AIR_POGO_COUPLER_ASSY.stp",
+      "source_sha256": "4d0b0ea571f3d1c869de4c0d00c3092c4ba63b8b872e180aa819af3d387eda1d",
+      "solid_count": 73,
+      "valid_solids": 73,
+      "bbox_min_mm": [
+        -43.50000000000003,
+        -56.0000001,
+        21.51547241929125
+      ],
+      "bbox_max_mm": [
+        38.5000001,
+        60.89999999999939,
+        69.5154724193
+      ],
+      "bbox_dimensions_mm": [
+        82.00000010000002,
+        116.90000009999939,
+        48.00000000000875
+      ],
+      "sum_volume_mm3": 116728.27239777689,
+      "uniform_volume_centroid_mm": [
+        -1.5557081762845801,
+        -0.8148087457116284,
+        44.91713877186758
+      ],
+      "uniform_volume_inertia_per_unit_mass_m2": [
+        [
+          0.0006933853362478798,
+          -3.1988204573134926e-06,
+          -1.2623127546476789e-05
+        ],
+        [
+          -3.1988204573134926e-06,
+          0.00036255028575054373,
+          6.832099614444396e-06
+        ],
+        [
+          -1.2623127546476789e-05,
+          6.832099614444396e-06,
+          0.0008901176792095519
+        ]
+      ],
+      "mesh_file": "meshes/tcc1_master_raw_mm.stl",
+      "mesh_sha256": "1039da11f6046923985b2fa3281dfb6a117476d89f7c7aa5f84eb08490f2577c",
+      "verified_mount_transform": null,
+      "measured_mass_kg": null,
+      "measured_com_m": null,
+      "measured_inertia_kg_m2": null
+    },
+    "tcc1_tool": {
+      "source_file": "TCC1_TOOL_AIR_POGO_COUPLER_ASSY.stp",
+      "source_sha256": "608a3752daa40a74f43fccc01c9283f774c7ab38d29eb157147ee5886f805758",
+      "solid_count": 37,
+      "valid_solids": 37,
+      "bbox_min_mm": [
+        -43.5,
+        -37.0,
+        -57.484527580707294
+      ],
+      "bbox_max_mm": [
+        31.5000001,
+        60.9,
+        -18.084527401999217
+      ],
+      "bbox_dimensions_mm": [
+        75.0000001,
+        97.9,
+        39.400000178708076
+      ],
+      "sum_volume_mm3": 58355.408215107345,
+      "uniform_volume_centroid_mm": [
+        -2.299029533661738,
+        7.113429682676783,
+        -35.55232516134872
+      ],
+      "uniform_volume_inertia_per_unit_mass_m2": [
+        [
+          0.0006004624476012147,
+          -1.8346032066305764e-05,
+          1.4321043133346818e-05
+        ],
+        [
+          -1.8346032066305764e-05,
+          0.00038623751281795265,
+          -5.1756236359567196e-05
+        ],
+        [
+          1.4321043133346818e-05,
+          -5.1756236359567196e-05,
+          0.0007972288601520638
+        ]
+      ],
+      "mesh_file": "meshes/tcc1_tool_raw_mm.stl",
+      "mesh_sha256": "fb19ef6c145b20f928a5c0658bd7ccef3b32ada0b2a206839e13b9d30d51b665",
+      "verified_mount_transform": null,
+      "measured_mass_kg": null,
+      "measured_com_m": null,
+      "measured_inertia_kg_m2": null
+    },
+    "tcc1_tool_rack": {
+      "source_file": "TCC1_TOOL_RACK_ASSY (1).stp",
+      "source_sha256": "c90f4b036ed352b129516e27a4b90f681856cc4ca0abfd65720b89830925dbfe",
+      "solid_count": 12,
+      "valid_solids": 12,
+      "bbox_min_mm": [
+        -40.93548312231322,
+        -534.2330683702212,
+        -183.69016675499836
+      ],
+      "bbox_max_mm": [
+        489.06451687768725,
+        31.76693172993084,
+        -18.690166754997954
+      ],
+      "bbox_dimensions_mm": [
+        530.0000000000005,
+        566.0000001001521,
+        165.0000000000004
+      ],
+      "sum_volume_mm3": 1909242.5791292053,
+      "uniform_volume_centroid_mm": [
+        224.06408545862786,
+        -312.8289622076009,
+        -122.67224357460887
+      ],
+      "uniform_volume_inertia_per_unit_mass_m2": [
+        [
+          0.0524130362360143,
+          1.478006391636719e-07,
+          3.1460480601683883e-06
+        ],
+        [
+          1.478006391636719e-07,
+          0.031671037426623846,
+          -0.0003491225957188872
+        ],
+        [
+          3.1460480601683883e-06,
+          -0.0003491225957188872,
+          0.08254432050986113
+        ]
+      ],
+      "mesh_file": "meshes/tcc1_tool_rack_raw_mm.stl",
+      "mesh_sha256": "2e298951b1ffd51aa9a40cb95111904a62ecc66912f25e85c8838a80e30ef59d",
+      "verified_mount_transform": null,
+      "measured_mass_kg": null,
+      "measured_com_m": null,
+      "measured_inertia_kg_m2": null
+    }
+  }
+}

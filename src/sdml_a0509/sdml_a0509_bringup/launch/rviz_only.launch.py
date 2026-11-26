@@ -17,7 +17,16 @@ def _validate_tool(context):
     dynamics_model = LaunchConfiguration("mdpg_dynamics_model").perform(context)
     if dynamics_model not in ("visual", "box_approx") or (selected != "mdpg_1s1" and dynamics_model != "visual"):
         raise RuntimeError("mdpg_dynamics_model must be visual or box_approx with gripper_type:=mdpg_1s1")
-    if selected == "mdpg_1s1":
+    changer = LaunchConfiguration("tool_changer_type").perform(context)
+    mode = LaunchConfiguration("tool_changer_dynamics_model").perform(context)
+    rack = LaunchConfiguration("tool_rack_enabled").perform(context)
+    if changer not in ("none", "tcc1") or mode not in ("visual", "dynamics") or rack not in ("true", "false"):
+        raise RuntimeError("Invalid TCC1 type, dynamics model or rack option")
+    if changer == "tcc1" or rack == "true":
+        from tcc1_tool_changer_description.model import load_configuration
+        load_configuration(LaunchConfiguration("tcc1_config").perform(context), selected, mode,
+                           changer=changer == "tcc1", rack=rack == "true")
+    if selected == "mdpg_1s1" and changer == "none":
         for key in ("mdpg_mount_xyz", "mdpg_mount_rpy"):
             try:
                 values = [float(part) for part in LaunchConfiguration(key).perform(context).split()]
@@ -70,6 +79,10 @@ def generate_launch_description():
             " mdpg_mount_xyz:='", mdpg_mount_xyz, "'",
             " mdpg_mount_rpy:='", mdpg_mount_rpy, "'",
             " mdpg_dynamics_model:=", mdpg_dynamics_model,
+            " tool_changer_type:=", LaunchConfiguration("tool_changer_type"),
+            " tool_changer_dynamics_model:=", LaunchConfiguration("tool_changer_dynamics_model"),
+            " tool_rack_enabled:=", LaunchConfiguration("tool_rack_enabled"),
+            " tcc1_config:='", LaunchConfiguration("tcc1_config"), "'",
         ]
     )
     robot_description = {"robot_description": robot_description_content}
@@ -112,6 +125,11 @@ def generate_launch_description():
             DeclareLaunchArgument("mdpg_mount_xyz", default_value="TODO_MEASURE", description="Measured link_6 mount xyz (m)"),
             DeclareLaunchArgument("mdpg_mount_rpy", default_value="TODO_MEASURE", description="Measured link_6 mount rpy (rad)"),
             DeclareLaunchArgument("mdpg_dynamics_model", default_value="visual", description="visual | box_approx"),
+            DeclareLaunchArgument("tool_changer_type", default_value="none"),
+            DeclareLaunchArgument("tool_changer_dynamics_model", default_value="visual"),
+            DeclareLaunchArgument("tool_rack_enabled", default_value="false"),
+            DeclareLaunchArgument("tcc1_config", default_value=PathJoinSubstitution(
+                [FindPackageShare("tcc1_tool_changer_description"), "config", "tcc1_parameters.yaml"])),
             declare_rviz_config,
             declare_use_gui,
             OpaqueFunction(function=_validate_tool),

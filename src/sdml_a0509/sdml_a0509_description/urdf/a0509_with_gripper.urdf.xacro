@@ -6,19 +6,57 @@
   <xacro:arg name="mdpg_mount_xyz" default="TODO_MEASURE"/>
   <xacro:arg name="mdpg_mount_rpy" default="TODO_MEASURE"/>
   <xacro:arg name="mdpg_dynamics_model" default="visual"/>
+  <xacro:arg name="tool_changer_type" default="none"/>
+  <xacro:arg name="tool_changer_dynamics_model" default="visual"/>
+  <xacro:arg name="tool_rack_enabled" default="false"/>
+  <xacro:arg name="tcc1_config" default="$(find tcc1_tool_changer_description)/config/tcc1_parameters.yaml"/>
   <xacro:include filename="$(find dsr_description2)/xacro/a0509.urdf.xacro"/>
+
+  <xacro:property name="tcc1" value="${'$(arg tool_changer_type)' == 'tcc1'}"/>
+  <xacro:property name="rack" value="${'$(arg tool_rack_enabled)' == 'true'}"/>
+  <xacro:property name="tcc1_params" value="${xacro.load_yaml('$(arg tcc1_config)')}"/>
+  <xacro:property name="tcc1_dynamics" value="${'$(arg tool_changer_dynamics_model)' == 'dynamics'}"/>
+  <xacro:property name="gripper_parent" value="${'tcc1_tool' if tcc1 else 'link_6'}"/>
+  <xacro:if value="${tcc1 or rack}">
+    <xacro:include filename="$(find tcc1_tool_changer_description)/urdf/tcc1_macro.urdf.xacro"/>
+  </xacro:if>
+  <xacro:if value="${tcc1}">
+    <xacro:tcc1_component parent="link_6" name="master" config="${tcc1_params}"
+                          mount="link_6_to_master" dynamics="${tcc1_dynamics}"/>
+    <xacro:if value="${'$(arg gripper_type)' != 'none'}">
+      <xacro:tcc1_component parent="tcc1_master" name="tool" config="${tcc1_params}"
+                            mount="master_to_tool" dynamics="${tcc1_dynamics}"/>
+    </xacro:if>
+  </xacro:if>
+  <xacro:if value="${rack}">
+    <xacro:tcc1_component parent="world" name="rack" config="${tcc1_params}"
+                          mount="world_to_rack" dynamics="false"/>
+  </xacro:if>
 
   <xacro:if value="${'$(arg gripper_type)' == 'ag145'}">
     <xacro:include filename="$(find dh_ag145_description)/urdf/dh_ag145_macro.xacro"/>
+    <xacro:property name="tool_pose" value="${tcc1_params.mounts.tool_to_ag145}"/>
     <!-- Existing AG145 installation uses a 45 degree rotation about link_6 Z. -->
-    <xacro:dh_ag145_gripper prefix="ag145_" parent="link_6">
-      <origin xyz="0 0 0" rpy="0 0 0.7853981634"/>
+    <xacro:dh_ag145_gripper prefix="ag145_" parent="${gripper_parent}">
+      <origin xyz="${' '.join(map(str, tool_pose.xyz_m)) if tcc1 else '0 0 0'}"
+              rpy="${' '.join(map(str, tool_pose.rpy_rad)) if tcc1 else '0 0 0.7853981634'}"/>
     </xacro:dh_ag145_gripper>
+    <xacro:if value="${tcc1}">
+      <link name="ag145_tcp"/>
+      <xacro:tcc1_fixed parent="ag145_base_link" name="ag145_tcp" pose="${tcc1_params.gripper_tcp.ag145}"/>
+    </xacro:if>
   </xacro:if>
   <xacro:if value="${'$(arg gripper_type)' == 'mdpg_1s1'}">
     <xacro:include filename="$(find mdpg_1s1_description)/urdf/mdpg_1s1_macro.xacro"/>
-    <xacro:mdpg_1s1_gripper prefix="mdpg_" parent="link_6" dynamics_model="$(arg mdpg_dynamics_model)">
-      <origin xyz="$(arg mdpg_mount_xyz)" rpy="$(arg mdpg_mount_rpy)"/>
+    <xacro:property name="tool_pose" value="${tcc1_params.mounts.tool_to_mdpg}"/>
+    <xacro:mdpg_1s1_gripper prefix="mdpg_" parent="${gripper_parent}" dynamics_model="$(arg mdpg_dynamics_model)"
+                            publish_tcp="${not tcc1}">
+      <origin xyz="${' '.join(map(str, tool_pose.xyz_m)) if tcc1 else '$(arg mdpg_mount_xyz)'}"
+              rpy="${' '.join(map(str, tool_pose.rpy_rad)) if tcc1 else '$(arg mdpg_mount_rpy)'}"/>
     </xacro:mdpg_1s1_gripper>
+    <xacro:if value="${tcc1}">
+      <link name="mdpg_tcp"/>
+      <xacro:tcc1_fixed parent="mdpg_base_link" name="mdpg_tcp" pose="${tcc1_params.gripper_tcp.mdpg_1s1}"/>
+    </xacro:if>
   </xacro:if>
 </robot>

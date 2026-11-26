@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="tcc1_fixed" params="parent name pose">
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}"/>
+      <origin xyz="${' '.join(map(str, pose.xyz_m))}" rpy="${' '.join(map(str, pose.rpy_rad))}"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="tcc1_inertial" params="part">
+    <xacro:property name="override" value="${part.get('inertia_kg_m2')}"/>
+    <xacro:property name="inertia" value="${part.inertia_per_unit_mass_m2 if override is None else override}"/>
+    <xacro:property name="scale" value="${float(part.mass_kg) if override is None else 1.0}"/>
+    <inertial>
+      <origin xyz="${' '.join(map(str, part.com_m))}" rpy="0 0 0"/>
+      <mass value="${float(part.mass_kg)}"/>
+      <inertia ixx="${inertia[0] * scale}" iyy="${inertia[1] * scale}" izz="${inertia[2] * scale}"
+               ixy="${inertia[3] * scale}" ixz="${inertia[4] * scale}" iyz="${inertia[5] * scale}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="tcc1_accessories" params="parent entries names">
+    <xacro:if value="${len(names) > 0}">
+      <xacro:property name="label" value="${names[0]}"/>
+      <xacro:property name="part" value="${entries[label]}"/>
+      <xacro:if value="${part.get('mass_kg') is not None}">
+        <link name="${parent}_${label}"><xacro:tcc1_inertial part="${part}"/></link>
+        <joint name="${parent}_${label}_joint" type="fixed">
+          <parent link="${parent}"/>
+          <child link="${parent}_${label}"/>
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+        </joint>
+      </xacro:if>
+      <xacro:tcc1_accessories parent="${parent}" entries="${entries}" names="${names[1:]}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:macro name="tcc1_component" params="parent name config mount dynamics">
+    <xacro:property name="part" value="${config.components[name]}"/>
+    <xacro:property name="cad" value="${part.link_to_raw_cad}"/>
+    <link name="tcc1_${name}">
+      <visual>
+        <origin xyz="${' '.join(map(str, cad.xyz_m))}" rpy="${' '.join(map(str, cad.rpy_rad))}"/>
+        <geometry>
+          <mesh filename="package://tcc1_tool_changer_description/${part.mesh}"
+                scale="${' '.join(map(str, config.mesh_scale))}"/>
+        </geometry>
+        <material name="tcc1_${name}_color"><color rgba="${' '.join(map(str, part.rgba))}"/></material>
+      </visual>
+      <xacro:if value="${dynamics}">
+        <xacro:tcc1_inertial part="${part}"/>
+      </xacro:if>
+    </link>
+    <xacro:tcc1_fixed parent="${parent}" name="tcc1_${name}" pose="${config.mounts[mount]}"/>
+    <xacro:if value="${dynamics}">
+      <xacro:property name="entries" value="${config.accessories[name] if 'accessories' in config and name in config.accessories else dict()}"/>
+      <xacro:tcc1_accessories parent="tcc1_${name}" entries="${entries}" names="${list(entries)}"/>
+    </xacro:if>
+  </xacro:macro>
+</robot>

@@ -1,0 +1,87 @@
+# Child pose relative to parent, in metres and fixed-axis roll/pitch/yaw radians.
+# CAD placement estimates are documented in README.md.
+version: 1
+mesh_scale: [0.001, 0.001, 0.001]
+manufacturer_spec:
+  model: TCC1
+  source_url: https://pub-mediabox-storage.rxweb-prd.com/exhibitor/document/exh-2afd04a1-42c8-4ecb-ab25-b61a71cfe688/bb005229-0889-4d80-900e-d54a5439b9d0.pdf
+  master_mass_kg: 0.448
+  tool_plate_mass_kg: 0.145
+  coupled_mass_kg: 0.593
+  master_diameter_height_mm: [63, 38]
+  tool_plate_dimensions_mm: [63, 63, 19.4]
+  coupled_dimensions_mm: [63, 63, 42]
+  rated_payload_kgf: 5
+  positioning_repeatability_mm: 0.05
+  coupler_classification: Air and Pogo are listed as accessories outside the main-product specification table
+mounts:
+  link_6_to_master:
+    xyz_m: [0, 0, 0]
+    rpy_rad: [0, 0, 0]
+    verified: false
+    source: Concentric flange face fixture
+  master_to_tool:
+    xyz_m: [0, 0, 0.0276]
+    rpy_rad: [0, 0, 0]
+    verified: false
+    source: CAD collar and air/Pogo registration with +55 mm raw Tool Z shift
+  tool_to_ag145:
+    xyz_m: [0, 0, 0.0144]
+    rpy_rad: [0, 0, 0.7853981634]
+    verified: false
+    source: Nominal CAD Tool Plate output face with legacy AG145 yaw
+  tool_to_mdpg:
+    xyz_m: [0, 0, 0.0144]
+    rpy_rad: [0, 0, 0]
+    verified: false
+    source: Nominal CAD Tool Plate output face with concentric mDPG fixture
+  world_to_rack:
+    xyz_m: [0, -1.15, 0]
+    rpy_rad: [0, 0, 0]
+    verified: false
+    source: Optional floor placement for inspection
+gripper_tcp:
+  ag145: {xyz_m: [0, 0, 0.20], rpy_rad: [0, 0, 0], source: Existing AG145 nominal TCP}
+  mdpg_1s1: {xyz_m: [0, 0, 0.09], rpy_rad: [3.141592653589793, 0, 0], source: Existing mDPG nominal TCP}
+components:
+  master:
+    mesh: meshes/tcc1_master_nominal_mm.stl
+    link_to_raw_cad: {xyz_m: [0, 0, 0.0595154724193], rpy_rad: [3.141592653589793, 0, 0]}
+    rgba: [0.14, 0.53, 0.70, 1]
+    mass_kg: 0.448
+    com_m: [-0.000002673486307770, 0.005475862215016, 0.014057851770632]
+    inertia_per_unit_mass_m2: [0.0005557667912340, 0.0003386585591189, 0.0007188317263598, 0.000005139097697460, -0.000000006173914187, 0.000000452938960337]
+    # A measured full CoM tensor, if entered, takes precedence over mass scaling.
+    inertia_kg_m2: null
+    parameter_source: Magbot TCC1 nominal mass and uniform-density scoped STEP volume
+    verified: false
+  tool:
+    mesh: meshes/tcc1_tool_nominal_mm.stl
+    link_to_raw_cad: {xyz_m: [0, 0, -0.0230845275807], rpy_rad: [3.141592653589793, 0, 0]}
+    rgba: [0.94, 0.49, 0.12, 1]
+    mass_kg: 0.145
+    com_m: [0.000245257260165, 0.001195778680628, 0.008536286439574]
+    inertia_per_unit_mass_m2: [0.0003756815391883, 0.0003478332677780, 0.0006783680401098, 0.0000044172638162649, 0.0000006524601361599, 0.000004681568471353]
+    inertia_kg_m2: null
+    parameter_source: Magbot TCC1 nominal mass and uniform-density scoped STEP volume
+    verified: false
+  rack:
+    mesh: meshes/tcc1_tool_rack_raw_mm.stl
+    link_to_raw_cad: {xyz_m: [-0.224064517, 0.251233068, 0.183690167], rpy_rad: [0, 0, 0]}
+    rgba: [0.36, 0.41, 0.47, 1]
+# Optional parts: each half uses the axes and origin of its parent frame.
+# A null mass means unknown and omitted. Supply mass, CoM, a CoM tensor and source to include it.
+accessories:
+  master:
+    air_coupler: &unknown_accessory
+      mass_kg: null
+      com_m: null
+      inertia_kg_m2: null
+      parameter_source: null
+      verified: false
+    pogo_pin_coupler: {<<: *unknown_accessory}
+    robot_side_adapter: {<<: *unknown_accessory}
+  tool:
+    air_coupler: {<<: *unknown_accessory}
+    pogo_pin_coupler: {<<: *unknown_accessory}
+    gripper_side_adapter: {<<: *unknown_accessory}

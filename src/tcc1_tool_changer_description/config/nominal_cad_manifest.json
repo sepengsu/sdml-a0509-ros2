@@ -1,0 +1,108 @@
+{
+  "method": "Sum of selected STEP solid volumes, uniform density, CAD axes, tensor about CAD CoM.",
+  "mount_registration_mm": {
+    "master_flange_z": 59.5154724193,
+    "tool_raw_z_shift": 55.0,
+    "tool_output_z": -37.4845275807,
+    "coupled_height": 42.0
+  },
+  "parts": {
+    "master": {
+      "source_file": "TCC1_MASTER_AIR_POGO_COUPLER_ASSY.stp",
+      "source_sha256": "4d0b0ea571f3d1c869de4c0d00c3092c4ba63b8b872e180aa819af3d387eda1d",
+      "group": "5K_TCC1_MASTER_20240724",
+      "solid_count": 32,
+      "excluded_output_extensions": [],
+      "mesh": "meshes/tcc1_master_nominal_mm.stl",
+      "mesh_sha256": "fafe6be1d1875dfcd7541fbc6a74a839cb70f2846cc05e268400cca150b07c71",
+      "bbox_min_mm": [
+        -38.50000010000001,
+        -56.0000001,
+        21.51547241929125
+      ],
+      "bbox_max_mm": [
+        38.5000001,
+        38.50000010000001,
+        69.5154724193
+      ],
+      "sum_volume_mm3": 101153.19063966855,
+      "uniform_volume_centroid_mm": [
+        -0.0026734863077702573,
+        -5.4758622150159635,
+        45.45762064866847
+      ],
+      "uniform_volume_inertia_per_unit_mass_m2": [
+        [
+          0.0005557667912340296,
+          -5.13909769746033e-06,
+          6.173914186844947e-09
+        ],
+        [
+          -5.13909769746033e-06,
+          0.0003386585591188685,
+          4.5293896033680043e-07
+        ],
+        [
+          6.173914186844947e-09,
+          4.5293896033680043e-07,
+          0.0007188317263597592
+        ]
+      ]
+    },
+    "tool": {
+      "source_file": "TCC1_TOOL_AIR_POGO_COUPLER_ASSY.stp",
+      "source_sha256": "608a3752daa40a74f43fccc01c9283f774c7ab38d29eb157147ee5886f805758",
+      "group": "5K_TCC1_TOOL_PLATE_20240724",
+      "solid_count": 5,
+      "excluded_output_extensions": [
+        {
+          "bbox_min_mm": [
+            -25.0,
+            -25.0,
+            -57.484527580707294
+          ],
+          "bbox_max_mm": [
+            25.0,
+            25.0,
+            -37.48452758069989
+          ]
+        }
+      ],
+      "mesh": "meshes/tcc1_tool_nominal_mm.stl",
+      "mesh_sha256": "837ecfb199a955ddb7c9e846eb6d53357424f06029d10d335d6959e2b238b90b",
+      "bbox_min_mm": [
+        -31.5000001,
+        -37.0,
+        -37.48452758070326
+      ],
+      "bbox_max_mm": [
+        31.5000001,
+        31.5000001,
+        -18.084527401999217
+      ],
+      "sum_volume_mm3": 28177.552605847868,
+      "uniform_volume_centroid_mm": [
+        0.24525726016478525,
+        -1.195778680628269,
+        -31.62081402027382
+      ],
+      "uniform_volume_inertia_per_unit_mass_m2": [
+        [
+          0.00037568153918825735,
+          -4.417263816264911e-06,
+          -6.524601361598971e-07
+        ],
+        [
+          -4.417263816264911e-06,
+          0.00034783326777800585,
+          4.681568471352533e-06
+        ],
+        [
+          -6.524601361598971e-07,
+          4.681568471352533e-06,
+          0.0006783680401098453
+        ]
+      ]
+    }
+  }
+}

@@ -48,6 +48,10 @@ def generate_launch_description():
             "mdpg_mount_xyz": mdpg_mount_xyz,
             "mdpg_mount_rpy": mdpg_mount_rpy,
             "mdpg_dynamics_model": mdpg_dynamics_model,
+            "tool_changer_type": LaunchConfiguration("tool_changer_type"),
+            "tool_changer_dynamics_model": LaunchConfiguration("tool_changer_dynamics_model"),
+            "tool_rack_enabled": LaunchConfiguration("tool_rack_enabled"),
+            "tcc1_config": LaunchConfiguration("tcc1_config"),
         }.items(),
     )
 
@@ -65,6 +69,10 @@ def generate_launch_description():
             " mdpg_mount_xyz:='", mdpg_mount_xyz, "'",
             " mdpg_mount_rpy:='", mdpg_mount_rpy, "'",
             " mdpg_dynamics_model:=", mdpg_dynamics_model,
+            " tool_changer_type:=", LaunchConfiguration("tool_changer_type"),
+            " tool_changer_dynamics_model:=", LaunchConfiguration("tool_changer_dynamics_model"),
+            " tool_rack_enabled:=", LaunchConfiguration("tool_rack_enabled"),
+            " tcc1_config:='", LaunchConfiguration("tcc1_config"), "'",
         ]
     )
     robot_description = {"robot_description": robot_description_content}
@@ -93,6 +101,11 @@ def generate_launch_description():
             DeclareLaunchArgument("mdpg_mount_xyz", default_value="TODO_MEASURE"),
             DeclareLaunchArgument("mdpg_mount_rpy", default_value="TODO_MEASURE"),
             DeclareLaunchArgument("mdpg_dynamics_model", default_value="visual", description="visual | box_approx"),
+            DeclareLaunchArgument("tool_changer_type", default_value="none"),
+            DeclareLaunchArgument("tool_changer_dynamics_model", default_value="visual"),
+            DeclareLaunchArgument("tool_rack_enabled", default_value="false"),
+            DeclareLaunchArgument("tcc1_config", default_value=PathJoinSubstitution(
+                [FindPackageShare("tcc1_tool_changer_description"), "config", "tcc1_parameters.yaml"])),
             declare_color,
             declare_use_sim_time,
             declare_start_rviz,
